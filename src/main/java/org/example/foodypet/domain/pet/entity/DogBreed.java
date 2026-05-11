@@ -1,0 +1,5 @@
+package org.example.foodypet.domain.pet.entity;
+
+public enum DogBreed {
+    MIX, GOLDEN_RETRIEVER, MALTESE, POODLE, POMERANIAN, SHIH_TZU, BICHON_FRISE, CHIHUAHUA, DACHSHUND, WELSH_CORGI, SHIBA_INU, JINDO, FRENCH_BULLDOG
+}
