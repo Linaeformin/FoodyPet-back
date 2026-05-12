@@ -1,17 +1,18 @@
 package org.example.foodypet.domain.pet.entity;
 
-import org.example.foodypet.common.entity.BaseTimeEntity;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.example.foodypet.common.entity.BaseTimeEntity;
 
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "pet_nutrition_standards")
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Setter
+@NoArgsConstructor
 public class PetNutritionStandard extends BaseTimeEntity {
 
     @Id

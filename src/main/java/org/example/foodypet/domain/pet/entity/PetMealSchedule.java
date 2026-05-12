@@ -1,10 +1,10 @@
 package org.example.foodypet.domain.pet.entity;
 
-import org.example.foodypet.common.entity.BaseTimeEntity;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.example.foodypet.common.entity.BaseTimeEntity;
 
 import java.time.LocalTime;
 
@@ -14,7 +14,8 @@ import java.time.LocalTime;
         @UniqueConstraint(columnNames = {"pet_id", "meal_time"})
 })
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Setter
+@NoArgsConstructor
 public class PetMealSchedule extends BaseTimeEntity {
 
     @Id

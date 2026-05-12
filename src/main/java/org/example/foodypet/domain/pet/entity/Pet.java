@@ -1,18 +1,20 @@
 package org.example.foodypet.domain.pet.entity;
 
-import org.example.foodypet.common.entity.BaseTimeEntity;
-import org.example.foodypet.domain.user.entity.User;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.example.foodypet.common.entity.BaseTimeEntity;
+import org.example.foodypet.domain.user.entity.User;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
 @Table(name = "pets")
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Setter
+@NoArgsConstructor
 public class Pet extends BaseTimeEntity {
 
     @Id
@@ -24,6 +26,9 @@ public class Pet extends BaseTimeEntity {
 
     @Column(nullable = false)
     private LocalDate birth;
+
+    @Column(name = "weight_kg", precision = 5, scale = 2, nullable = false)
+    private BigDecimal weightKg;
 
     @Lob
     @Column(name = "pet_img", nullable = false)

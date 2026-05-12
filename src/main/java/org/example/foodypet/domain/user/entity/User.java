@@ -29,4 +29,8 @@ public class User extends BaseTimeEntity {
 
     @Lob
     private String intro;
+
+    public void updateUserImg(String userImg) {
+        this.userImg = userImg;
+    }
 }
