@@ -37,4 +37,25 @@ public class PetFoodStock extends BaseTimeEntity {
 
     @Column(name = "expired_at")
     private LocalDate expiredAt;
+
+    @Column(name = "is_treat", nullable = false)
+    private Boolean isTreat = false;
+
+    public static PetFoodStock create(
+            User user,
+            PetFood petFood,
+            BigDecimal quantity,
+            Unit unit,
+            LocalDate expiredAt,
+            Boolean isTreat
+    ) {
+        PetFoodStock stock = new PetFoodStock();
+        stock.user = user;
+        stock.petFood = petFood;
+        stock.quantity = quantity;
+        stock.unit = unit;
+        stock.expiredAt = expiredAt;
+        stock.isTreat = isTreat != null ? isTreat : false;
+        return stock;
+    }
 }

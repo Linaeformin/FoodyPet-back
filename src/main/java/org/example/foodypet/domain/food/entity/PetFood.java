@@ -43,9 +43,6 @@ public class PetFood extends BaseTimeEntity {
     @Column(name = "pet_type", nullable = false)
     private PetType petType;
 
-    @Column(name = "is_treat", nullable = false)
-    private Boolean isTreat = false;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private FoodSource source = FoodSource.SYSTEM;
