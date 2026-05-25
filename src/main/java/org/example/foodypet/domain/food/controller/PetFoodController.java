@@ -109,4 +109,14 @@ public class PetFoodController {
 
         return ResponseEntity.ok(response);
     }
+
+    // 식품 검색 결과 조회
+    @GetMapping("/search")
+    public ResponseEntity<?> searchPetFoods(
+            @RequestParam String keyword
+    ) {
+        PetFoodListResDto response = petFoodService.searchPetFoods(keyword);
+
+        return ResponseEntity.ok(response);
+    }
 }

@@ -36,15 +36,7 @@ public class PetFoodService {
         List<PetFood> petFoods = petFoodRepository.findAll();
 
         List<PetFoodListResDto.PetFoodDto> foodDtos = petFoods.stream()
-                .map(petFood -> PetFoodListResDto.PetFoodDto.builder()
-                        .foodId(petFood.getId())
-                        .foodName(petFood.getName())
-                        .imageUrl(petFood.getFoodImg())
-                        .nutritionImageUrl(petFood.getNutritionImg())
-                        .foodSource(petFood.getSource())
-                        .foodType(petFood.getFoodType())
-                        .unit(petFood.getUnit())
-                        .build())
+                .map(this::toPetFoodDto)
                 .toList();
 
         return PetFoodListResDto.builder()
@@ -283,7 +275,6 @@ public class PetFoodService {
     }
 
     // 자동 완성
-// 자동완성
     public PetFoodAutocompleteResDto autocompletePetFoods(String keyword) {
         if (keyword == null || keyword.isBlank()) {
             return PetFoodAutocompleteResDto.builder()
@@ -310,6 +301,37 @@ public class PetFoodService {
 
         return PetFoodAutocompleteResDto.builder()
                 .foodNames(foodNames)
+                .build();
+    }
+
+    // 식품 검색 결과 조회
+    public PetFoodListResDto searchPetFoods(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return PetFoodListResDto.builder()
+                    .foods(List.of())
+                    .build();
+        }
+
+        List<PetFood> petFoods = petFoodRepository.findByNameContaining(keyword.trim());
+
+        List<PetFoodListResDto.PetFoodDto> foodDtos = petFoods.stream()
+                .map(this::toPetFoodDto)
+                .toList();
+
+        return PetFoodListResDto.builder()
+                .foods(foodDtos)
+                .build();
+    }
+
+    private PetFoodListResDto.PetFoodDto toPetFoodDto(PetFood petFood) {
+        return PetFoodListResDto.PetFoodDto.builder()
+                .foodId(petFood.getId())
+                .foodName(petFood.getName())
+                .imageUrl(petFood.getFoodImg())
+                .nutritionImageUrl(petFood.getNutritionImg())
+                .foodSource(petFood.getSource())
+                .foodType(petFood.getFoodType())
+                .unit(petFood.getUnit())
                 .build();
     }
 }

@@ -8,4 +8,5 @@ import java.util.List;
 public interface PetFoodRepository extends JpaRepository<PetFood, Long> {
     List<PetFood> findTop10ByNameContaining(String keyword);
     List<PetFood> findTop3ByNameContaining(String keyword);
+    List<PetFood> findByNameContaining(String keyword);
 }
