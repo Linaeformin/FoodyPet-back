@@ -2,10 +2,7 @@ package org.example.foodypet.domain.food.service;
 
 import lombok.RequiredArgsConstructor;
 import org.example.foodypet.common.config.CustomUserDetails;
-import org.example.foodypet.domain.food.dto.PetFoodListResDto;
-import org.example.foodypet.domain.food.dto.PetFoodStockListResDto;
-import org.example.foodypet.domain.food.dto.PetFoodStockResDto;
-import org.example.foodypet.domain.food.dto.PetFoodSystemFormDto;
+import org.example.foodypet.domain.food.dto.*;
 import org.example.foodypet.domain.food.entity.FoodType;
 import org.example.foodypet.domain.food.entity.PetFood;
 import org.example.foodypet.domain.food.entity.PetFoodStock;
@@ -21,6 +18,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -175,5 +175,51 @@ public class PetFoodService {
                     Comparator.nullsLast(Long::compareTo)
             );
         };
+    }
+
+    @Transactional
+    public void updatePetFoodStockQuantities(
+            CustomUserDetails me,
+            PetFoodStockUpdateReqDto dto
+    ) {
+        if (dto.getStocks() == null || dto.getStocks().isEmpty()) {
+            throw new IllegalArgumentException("수정할 재고 목록이 비어 있습니다.");
+        }
+
+        for (PetFoodStockUpdateReqDto.StockQuantityDto stockDto : dto.getStocks()) {
+            if (stockDto.getStockId() == null) {
+                throw new IllegalArgumentException("재고 ID는 필수입니다.");
+            }
+
+            if (stockDto.getQuantity() == null) {
+                throw new IllegalArgumentException("수량은 필수입니다.");
+            }
+
+            if (stockDto.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException("수량은 0보다 커야 합니다.");
+            }
+        }
+
+        List<Long> stockIds = dto.getStocks().stream()
+                .map(PetFoodStockUpdateReqDto.StockQuantityDto::getStockId)
+                .distinct()
+                .toList();
+
+        List<PetFoodStock> stocks = petFoodStockRepository.findByIdInAndUserId(
+                stockIds,
+                me.getId()
+        );
+
+        if (stocks.size() != stockIds.size()) {
+            throw new IllegalArgumentException("존재하지 않거나 수정 권한이 없는 재고가 포함되어 있습니다.");
+        }
+
+        Map<Long, PetFoodStock> stockMap = stocks.stream()
+                .collect(Collectors.toMap(PetFoodStock::getId, Function.identity()));
+
+        for (PetFoodStockUpdateReqDto.StockQuantityDto stockDto : dto.getStocks()) {
+            PetFoodStock stock = stockMap.get(stockDto.getStockId());
+            stock.updateQuantity(stockDto.getQuantity());
+        }
     }
 }

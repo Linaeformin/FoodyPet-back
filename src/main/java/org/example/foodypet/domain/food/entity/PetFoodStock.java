@@ -58,4 +58,8 @@ public class PetFoodStock extends BaseTimeEntity {
         stock.isTreat = isTreat != null ? isTreat : false;
         return stock;
     }
+
+    public void updateQuantity(BigDecimal quantity) {
+        this.quantity = quantity;
+    }
 }

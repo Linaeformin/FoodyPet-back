@@ -5,6 +5,7 @@ import org.example.foodypet.common.config.ApiSuccess;
 import org.example.foodypet.common.config.CustomUserDetails;
 import org.example.foodypet.domain.food.dto.PetFoodListResDto;
 import org.example.foodypet.domain.food.dto.PetFoodStockListResDto;
+import org.example.foodypet.domain.food.dto.PetFoodStockUpdateReqDto;
 import org.example.foodypet.domain.food.dto.PetFoodSystemFormDto;
 import org.example.foodypet.domain.food.entity.FoodType;
 import org.example.foodypet.domain.food.entity.PetFoodStockSortType;
@@ -60,5 +61,18 @@ public class PetFoodController {
         );
 
         return ResponseEntity.ok(response);
+    }
+
+    // 재고 수량 여러 개 수정
+    @PatchMapping("/stocks")
+    public ResponseEntity<?> updatePetFoodStockQuantities(
+            @AuthenticationPrincipal CustomUserDetails me,
+            @RequestBody PetFoodStockUpdateReqDto dto
+    ) {
+        petFoodService.updatePetFoodStockQuantities(me, dto);
+
+        return ResponseEntity.ok(
+                new ApiSuccess(200, "성공적으로 처리되었습니다.")
+        );
     }
 }
