@@ -255,4 +255,29 @@ public class PetFoodService {
                 dto.getIsTreat()
         );
     }
+
+    @Transactional
+    public void deletePetFoodStocks(
+            CustomUserDetails me,
+            PetFoodStockDeleteReqDto dto
+    ) {
+        if (dto.getStockIds() == null || dto.getStockIds().isEmpty()) {
+            throw new IllegalArgumentException("삭제할 재고 목록이 비어 있습니다.");
+        }
+
+        List<Long> stockIds = dto.getStockIds().stream()
+                .distinct()
+                .toList();
+
+        List<PetFoodStock> stocks = petFoodStockRepository.findByIdInAndUserId(
+                stockIds,
+                me.getId()
+        );
+
+        if (stocks.size() != stockIds.size()) {
+            throw new IllegalArgumentException("존재하지 않거나 삭제 권한이 없는 재고가 포함되어 있습니다.");
+        }
+
+        petFoodStockRepository.deleteAll(stocks);
+    }
 }

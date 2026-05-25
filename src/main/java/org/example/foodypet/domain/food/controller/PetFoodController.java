@@ -86,4 +86,17 @@ public class PetFoodController {
                 new ApiSuccess(200, "성공적으로 처리되었습니다.")
         );
     }
+
+    // 재고 여러 개 삭제
+    @DeleteMapping("/stocks")
+    public ResponseEntity<?> deletePetFoodStocks(
+            @AuthenticationPrincipal CustomUserDetails me,
+            @RequestBody PetFoodStockDeleteReqDto dto
+    ) {
+        petFoodService.deletePetFoodStocks(me, dto);
+
+        return ResponseEntity.ok(
+                new ApiSuccess(200, "성공적으로 처리되었습니다.")
+        );
+    }
 }
