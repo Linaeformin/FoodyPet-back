@@ -30,6 +30,7 @@ public class PetFoodService {
     private final PetFoodRepository petFoodRepository;
     private final PetFoodStockRepository petFoodStockRepository;
     private final UsersRepository usersRepository;
+    private final PetFoodAutocompleteRedisService petFoodAutocompleteRedisService;
 
     public PetFoodListResDto getPetFoodList() {
         List<PetFood> petFoods = petFoodRepository.findAll();
@@ -279,5 +280,36 @@ public class PetFoodService {
         }
 
         petFoodStockRepository.deleteAll(stocks);
+    }
+
+    // 자동 완성
+// 자동완성
+    public PetFoodAutocompleteResDto autocompletePetFoods(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return PetFoodAutocompleteResDto.builder()
+                    .foodNames(List.of())
+                    .build();
+        }
+
+        String trimmedKeyword = keyword.trim();
+
+        // 1. Redis에서 keyword로 시작하는 식품명 3개 검색
+        List<String> redisResults = petFoodAutocompleteRedisService.search(trimmedKeyword);
+
+        if (!redisResults.isEmpty()) {
+            return PetFoodAutocompleteResDto.builder()
+                    .foodNames(redisResults)
+                    .build();
+        }
+
+        // 2. Redis에 없으면 MySQL에서 %keyword% 검색
+        List<String> foodNames = petFoodRepository.findTop3ByNameContaining(trimmedKeyword)
+                .stream()
+                .map(PetFood::getName)
+                .toList();
+
+        return PetFoodAutocompleteResDto.builder()
+                .foodNames(foodNames)
+                .build();
     }
 }

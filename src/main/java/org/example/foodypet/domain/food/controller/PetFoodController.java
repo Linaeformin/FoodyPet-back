@@ -99,4 +99,14 @@ public class PetFoodController {
                 new ApiSuccess(200, "성공적으로 처리되었습니다.")
         );
     }
+
+    // 식품 자동완성 검색
+    @GetMapping("/autocomplete")
+    public ResponseEntity<?> autocompletePetFoods(
+            @RequestParam String keyword
+    ) {
+        PetFoodAutocompleteResDto response = petFoodService.autocompletePetFoods(keyword);
+
+        return ResponseEntity.ok(response);
+    }
 }
