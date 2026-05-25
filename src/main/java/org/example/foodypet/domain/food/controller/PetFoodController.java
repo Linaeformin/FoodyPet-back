@@ -3,10 +3,7 @@ package org.example.foodypet.domain.food.controller;
 import lombok.RequiredArgsConstructor;
 import org.example.foodypet.common.config.ApiSuccess;
 import org.example.foodypet.common.config.CustomUserDetails;
-import org.example.foodypet.domain.food.dto.PetFoodListResDto;
-import org.example.foodypet.domain.food.dto.PetFoodStockListResDto;
-import org.example.foodypet.domain.food.dto.PetFoodStockUpdateReqDto;
-import org.example.foodypet.domain.food.dto.PetFoodSystemFormDto;
+import org.example.foodypet.domain.food.dto.*;
 import org.example.foodypet.domain.food.entity.FoodType;
 import org.example.foodypet.domain.food.entity.PetFoodStockSortType;
 import org.example.foodypet.domain.food.service.PetFoodService;
@@ -70,6 +67,20 @@ public class PetFoodController {
             @RequestBody PetFoodStockUpdateReqDto dto
     ) {
         petFoodService.updatePetFoodStockQuantities(me, dto);
+
+        return ResponseEntity.ok(
+                new ApiSuccess(200, "성공적으로 처리되었습니다.")
+        );
+    }
+
+    // 재고 단일 수정
+    @PutMapping("/stocks/{stockId}")
+    public ResponseEntity<?> updatePetFoodStock(
+            @AuthenticationPrincipal CustomUserDetails me,
+            @PathVariable Long stockId,
+            @RequestBody PetFoodStockUpdateFormDto dto
+    ) {
+        petFoodService.updatePetFoodStock(me, stockId, dto);
 
         return ResponseEntity.ok(
                 new ApiSuccess(200, "성공적으로 처리되었습니다.")

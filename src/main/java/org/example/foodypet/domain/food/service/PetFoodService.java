@@ -222,4 +222,37 @@ public class PetFoodService {
             stock.updateQuantity(stockDto.getQuantity());
         }
     }
+
+    @Transactional
+    public void updatePetFoodStock(
+            CustomUserDetails me,
+            Long stockId,
+            PetFoodStockUpdateFormDto dto
+    ) {
+        if (stockId == null) {
+            throw new IllegalArgumentException("재고 ID는 필수입니다.");
+        }
+
+        if (dto.getQuantity() <= 0) {
+            throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
+        }
+
+        if (dto.getUnit() == null) {
+            throw new IllegalArgumentException("단위는 필수입니다.");
+        }
+
+        PetFoodStock stock = petFoodStockRepository.findByIdAndUserId(
+                stockId,
+                me.getId()
+        ).orElseThrow(() ->
+                new IllegalArgumentException("존재하지 않거나 수정 권한이 없는 재고입니다.")
+        );
+
+        stock.update(
+                BigDecimal.valueOf(dto.getQuantity()),
+                dto.getUnit(),
+                dto.getExpiredAt(),
+                dto.getIsTreat()
+        );
+    }
 }

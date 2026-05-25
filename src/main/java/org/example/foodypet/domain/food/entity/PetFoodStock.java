@@ -62,4 +62,16 @@ public class PetFoodStock extends BaseTimeEntity {
     public void updateQuantity(BigDecimal quantity) {
         this.quantity = quantity;
     }
+
+    public void update(
+            BigDecimal quantity,
+            Unit unit,
+            LocalDate expiredAt,
+            Boolean isTreat
+    ) {
+        this.quantity = quantity;
+        this.unit = unit;
+        this.expiredAt = expiredAt;
+        this.isTreat = isTreat != null ? isTreat : false;
+    }
 }

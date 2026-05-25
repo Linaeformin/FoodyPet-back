@@ -6,10 +6,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Collection;
+import java.util.Optional;
 
 public interface PetFoodStockRepository extends JpaRepository<PetFoodStock, Long> {
 
     List<PetFoodStock> findByUser(User user);
     List<PetFoodStock> findByUserId(Long userId);
     List<PetFoodStock> findByIdInAndUserId(Collection<Long> stockIds, Long userId);
+    Optional<PetFoodStock> findByIdAndUserId(Long stockId, Long userId);
 }
