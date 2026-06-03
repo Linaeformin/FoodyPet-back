@@ -35,4 +35,9 @@ public interface PetDailyDietRepository extends JpaRepository<PetDailyDiet, Long
             @Param("petId") Long petId,
             @Param("dietDate") LocalDate dietDate
     );
+
+    Optional<PetDailyDiet> findFirstByPetIdAndDietDateAndIsConfirmedTrueOrderByIdDesc(
+            Long petId,
+            LocalDate dietDate
+    );
 }

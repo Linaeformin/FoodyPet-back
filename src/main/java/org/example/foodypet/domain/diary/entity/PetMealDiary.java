@@ -47,4 +47,28 @@ public class PetMealDiary extends BaseTimeEntity {
 
     @Lob
     private String memo;
+
+    public static PetMealDiary create(
+            Pet pet,
+            PetDailyDiet dailyDiet,
+            PetMealSchedule petMealSchedule,
+            LocalDate diaryDate,
+            String imageUrl,
+            Satisfaction satisfaction,
+            MealStatus mealStatus,
+            BigDecimal waterIntakeMl,
+            String memo
+    ) {
+        PetMealDiary mealDiary = new PetMealDiary();
+        mealDiary.pet = pet;
+        mealDiary.dailyDiet = dailyDiet;
+        mealDiary.petMealSchedule = petMealSchedule;
+        mealDiary.diaryDate = diaryDate;
+        mealDiary.imageUrl = imageUrl;
+        mealDiary.satisfaction = satisfaction;
+        mealDiary.mealStatus = mealStatus;
+        mealDiary.waterIntakeMl = waterIntakeMl;
+        mealDiary.memo = memo;
+        return mealDiary;
+    }
 }
