@@ -1,6 +1,7 @@
 package org.example.foodypet.domain.diary.service;
 
 import lombok.RequiredArgsConstructor;
+import org.example.foodypet.common.S3Uploader;
 import org.example.foodypet.domain.diary.dto.MealDiaryWriteFormResponse;
 import org.example.foodypet.domain.diary.dto.PetMealDiaryCreateRequest;
 import org.example.foodypet.domain.diary.entity.PetMealDiary;
@@ -27,6 +28,7 @@ import org.example.foodypet.domain.water.repository.PetWaterIntakeItemRepository
 import org.example.foodypet.domain.water.repository.PetWaterIntakeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -39,6 +41,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class MealDiaryDietService {
+
+    private final S3Uploader s3Uploader;
 
     private final PetRepository petRepository;
 
@@ -56,7 +60,6 @@ public class MealDiaryDietService {
     private final PetWaterIntakeItemRepository petWaterIntakeItemRepository;
 
     public DietRecommendSimpleResponse getConfirmedDiet(Long petId, LocalDate date) {
-
         PetDailyDiet dailyDiet = petDailyDietRepository
                 .findFirstByPetIdAndDietDateAndIsConfirmedTrueOrderByIdDesc(petId, date)
                 .orElseThrow(() -> new IllegalArgumentException("불러올 수 있는 최종 등록 식단이 없습니다."));
@@ -111,8 +114,80 @@ public class MealDiaryDietService {
                 .build();
     }
 
+    public MealDiaryWriteFormResponse getMealDiaryWriteForm(Long petId, LocalDate date) {
+        PetDailyDiet dailyDiet = petDailyDietRepository
+                .findFirstByPetIdAndDietDateAndIsConfirmedTrueOrderByIdDesc(petId, date)
+                .orElseThrow(() -> new IllegalArgumentException("불러올 수 있는 최종 등록 식단이 없습니다."));
+
+        List<PetDailyDietItem> items =
+                petDailyDietItemRepository.findByDailyDietIdOrderByMealOrderAscIdAsc(dailyDiet.getId());
+
+        List<PetMealSchedule> schedules =
+                petMealScheduleRepository.findByPetIdOrderByMealOrderAsc(petId);
+
+        Map<Integer, PetMealSchedule> scheduleMap = schedules.stream()
+                .collect(Collectors.toMap(
+                        PetMealSchedule::getMealOrder,
+                        schedule -> schedule
+                ));
+
+        Map<Integer, List<PetDailyDietItem>> groupedByMealOrder = items.stream()
+                .collect(Collectors.groupingBy(PetDailyDietItem::getMealOrder));
+
+        List<MealDiaryWriteFormResponse.MealDto> meals = groupedByMealOrder.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(entry -> {
+                    Integer mealOrder = entry.getKey();
+                    List<PetDailyDietItem> mealItems = entry.getValue();
+
+                    PetMealSchedule schedule = scheduleMap.get(mealOrder);
+
+                    Long petMealScheduleId = schedule == null ? null : schedule.getId();
+
+                    String mealTime = schedule == null
+                            ? ""
+                            : schedule.getMealTime().format(DateTimeFormatter.ofPattern("HH:mm"));
+
+                    List<MealDiaryWriteFormResponse.FoodDto> foods = mealItems.stream()
+                            .map(this::toWriteFormFoodDto)
+                            .toList();
+
+                    String description = foods.stream()
+                            .map(MealDiaryWriteFormResponse.FoodDto::getDisplayText)
+                            .collect(Collectors.joining(", "));
+
+                    return MealDiaryWriteFormResponse.MealDto.builder()
+                            .petMealScheduleId(petMealScheduleId)
+                            .mealOrder(mealOrder)
+                            .mealTime(mealTime)
+                            .description(description)
+                            .foods(foods)
+                            .build();
+                })
+                .toList();
+
+        List<MealDiaryWriteFormResponse.CapsuleDto> capsules = petCapsuleRepository.findByPetId(petId)
+                .stream()
+                .map(capsule -> MealDiaryWriteFormResponse.CapsuleDto.builder()
+                        .petCapsuleId(capsule.getId())
+                        .capsuleName(capsule.getCapsuleName())
+                        .dailyCount(capsule.getCapsuleCount())
+                        .build()
+                )
+                .toList();
+
+        return MealDiaryWriteFormResponse.builder()
+                .dailyDietId(dailyDiet.getId())
+                .petId(dailyDiet.getPet().getId())
+                .petName(dailyDiet.getPet().getPetName())
+                .dietDate(dailyDiet.getDietDate())
+                .meals(meals)
+                .capsules(capsules)
+                .build();
+    }
+
     @Transactional
-    public void createMealDiary(PetMealDiaryCreateRequest request) {
+    public void createMealDiary(PetMealDiaryCreateRequest request, MultipartFile image) {
         Pet pet = petRepository.findById(request.petId())
                 .orElseThrow(() -> new IllegalArgumentException("반려동물을 찾을 수 없습니다."));
 
@@ -124,12 +199,21 @@ public class MealDiaryDietService {
 
         validateDiaryTarget(pet, dailyDiet, petMealSchedule);
 
+        validateDuplicateMealDiary(
+                pet.getId(),
+                dailyDiet.getId(),
+                petMealSchedule.getId(),
+                request.diaryDate()
+        );
+
+        String imageUrl = s3Uploader.uploadMealDiaryImage(image);
+
         PetMealDiary mealDiary = PetMealDiary.create(
                 pet,
                 dailyDiet,
                 petMealSchedule,
                 request.diaryDate(),
-                request.imageUrl(),
+                imageUrl,
                 request.satisfaction(),
                 request.mealStatus(),
                 request.waterIntakeMl(),
@@ -141,6 +225,25 @@ public class MealDiaryDietService {
         saveSymptoms(request, savedMealDiary);
         saveCapsules(request, savedMealDiary, pet);
         saveWaterIntake(pet, request.diaryDate(), request.waterIntakeMl());
+    }
+
+    private void validateDuplicateMealDiary(
+            Long petId,
+            Long dailyDietId,
+            Long petMealScheduleId,
+            LocalDate diaryDate
+    ) {
+        boolean exists = petMealDiaryRepository
+                .existsByPetIdAndDailyDietIdAndPetMealScheduleIdAndDiaryDate(
+                        petId,
+                        dailyDietId,
+                        petMealScheduleId,
+                        diaryDate
+                );
+
+        if (exists) {
+            throw new IllegalArgumentException("이미 등록된 식단 급여 기록입니다.");
+        }
     }
 
     private void validateDiaryTarget(
@@ -243,6 +346,22 @@ public class MealDiaryDietService {
                 .build();
     }
 
+    private MealDiaryWriteFormResponse.FoodDto toWriteFormFoodDto(PetDailyDietItem item) {
+        String amount = formatAmount(item.getAmount());
+        String unit = convertUnit(item.getUnit());
+
+        String foodName = item.getPetFood().getName();
+        String displayText = foodName + " " + amount + unit;
+
+        return MealDiaryWriteFormResponse.FoodDto.builder()
+                .foodId(item.getPetFood().getId())
+                .foodName(foodName)
+                .amount(amount)
+                .unit(unit)
+                .displayText(displayText)
+                .build();
+    }
+
     private String convertUnit(Unit unit) {
         if (unit == null) {
             return "";
@@ -260,94 +379,5 @@ public class MealDiaryDietService {
         }
 
         return amount.stripTrailingZeros().toPlainString();
-    }
-
-    public MealDiaryWriteFormResponse getMealDiaryWriteForm(Long petId, LocalDate date) {
-
-        PetDailyDiet dailyDiet = petDailyDietRepository
-                .findFirstByPetIdAndDietDateAndIsConfirmedTrueOrderByIdDesc(petId, date)
-                .orElseThrow(() -> new IllegalArgumentException("불러올 수 있는 최종 등록 식단이 없습니다."));
-
-        List<PetDailyDietItem> items =
-                petDailyDietItemRepository.findByDailyDietIdOrderByMealOrderAscIdAsc(dailyDiet.getId());
-
-        List<PetMealSchedule> schedules =
-                petMealScheduleRepository.findByPetIdOrderByMealOrderAsc(petId);
-
-        Map<Integer, PetMealSchedule> scheduleMap = schedules.stream()
-                .collect(Collectors.toMap(
-                        PetMealSchedule::getMealOrder,
-                        schedule -> schedule
-                ));
-
-        Map<Integer, List<PetDailyDietItem>> groupedByMealOrder = items.stream()
-                .collect(Collectors.groupingBy(PetDailyDietItem::getMealOrder));
-
-        List<MealDiaryWriteFormResponse.MealDto> meals = groupedByMealOrder.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .map(entry -> {
-                    Integer mealOrder = entry.getKey();
-                    List<PetDailyDietItem> mealItems = entry.getValue();
-
-                    PetMealSchedule schedule = scheduleMap.get(mealOrder);
-
-                    Long petMealScheduleId = schedule == null ? null : schedule.getId();
-
-                    String mealTime = schedule == null
-                            ? ""
-                            : schedule.getMealTime().format(DateTimeFormatter.ofPattern("HH:mm"));
-
-                    List<MealDiaryWriteFormResponse.FoodDto> foods = mealItems.stream()
-                            .map(this::toWriteFormFoodDto)
-                            .toList();
-
-                    String description = foods.stream()
-                            .map(MealDiaryWriteFormResponse.FoodDto::getDisplayText)
-                            .collect(Collectors.joining(", "));
-
-                    return MealDiaryWriteFormResponse.MealDto.builder()
-                            .petMealScheduleId(petMealScheduleId)
-                            .mealOrder(mealOrder)
-                            .mealTime(mealTime)
-                            .description(description)
-                            .foods(foods)
-                            .build();
-                })
-                .toList();
-
-        List<MealDiaryWriteFormResponse.CapsuleDto> capsules = petCapsuleRepository.findByPetId(petId)
-                .stream()
-                .map(capsule -> MealDiaryWriteFormResponse.CapsuleDto.builder()
-                        .petCapsuleId(capsule.getId())
-                        .capsuleName(capsule.getCapsuleName())
-                        .dailyCount(capsule.getCapsuleCount())
-                        .build()
-                )
-                .toList();
-
-        return MealDiaryWriteFormResponse.builder()
-                .dailyDietId(dailyDiet.getId())
-                .petId(dailyDiet.getPet().getId())
-                .petName(dailyDiet.getPet().getPetName())
-                .dietDate(dailyDiet.getDietDate())
-                .meals(meals)
-                .capsules(capsules)
-                .build();
-    }
-
-    private MealDiaryWriteFormResponse.FoodDto toWriteFormFoodDto(PetDailyDietItem item) {
-        String amount = formatAmount(item.getAmount());
-        String unit = convertUnit(item.getUnit());
-
-        String foodName = item.getPetFood().getName();
-        String displayText = foodName + " " + amount + unit;
-
-        return MealDiaryWriteFormResponse.FoodDto.builder()
-                .foodId(item.getPetFood().getId())
-                .foodName(foodName)
-                .amount(amount)
-                .unit(unit)
-                .displayText(displayText)
-                .build();
     }
 }

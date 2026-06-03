@@ -13,7 +13,6 @@ public record PetMealDiaryCreateRequest(
         Long dailyDietId,
         Long petMealScheduleId,
         LocalDate diaryDate,
-        String imageUrl,
         Satisfaction satisfaction,
         MealStatus mealStatus,
         BigDecimal waterIntakeMl,

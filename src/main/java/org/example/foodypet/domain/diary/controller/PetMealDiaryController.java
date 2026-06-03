@@ -1,14 +1,17 @@
 package org.example.foodypet.domain.diary.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.example.foodypet.common.config.ApiSuccess;
 import org.example.foodypet.domain.diary.dto.MealDiaryWriteFormResponse;
 import org.example.foodypet.domain.diary.dto.PetMealDiaryCreateRequest;
 import org.example.foodypet.domain.diet.dto.DietRecommendSimpleResponse;
 import org.example.foodypet.domain.diary.service.MealDiaryDietService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 
@@ -41,11 +44,14 @@ public class PetMealDiaryController {
      * 예:
      * POST /api/diaries/meals
      */
-    @PostMapping
-    public ResponseEntity<Void> createMealDiary(
-            @RequestBody PetMealDiaryCreateRequest request
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> createMealDiary(
+            @RequestPart("request") PetMealDiaryCreateRequest request,
+            @RequestPart(value = "image", required = false) MultipartFile image
     ) {
-        mealDiaryDietService.createMealDiary(request);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        mealDiaryDietService.createMealDiary(request, image);
+        return ResponseEntity
+                .status(201)
+                .body(new ApiSuccess(201, "성공적으로 처리되었습니다."));
     }
 }
