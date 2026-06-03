@@ -1,6 +1,7 @@
 package org.example.foodypet.domain.food.repository;
 
 import org.example.foodypet.domain.food.entity.PetFood;
+import org.example.foodypet.domain.food.entity.PetFoodStock;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

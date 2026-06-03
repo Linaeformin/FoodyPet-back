@@ -37,4 +37,19 @@ public class PetNutritionStandard extends BaseTimeEntity {
 
     @Column(name = "recommended_fiber", precision = 8, scale = 2)
     private BigDecimal recommendedFiber;
+
+    @Column(name = "recommended_calcium", precision = 8, scale = 2)
+    private BigDecimal recommendedCalcium;
+
+    @Column(name = "recommended_phosphorus", precision = 8, scale = 2)
+    private BigDecimal recommendedPhosphorus;
+
+    @Column(name = "recommended_taurine", precision = 8, scale = 2)
+    private BigDecimal recommendedTaurine;
+
+    @Column(name = "min_calcium_phosphorus_ratio", precision = 5, scale = 2)
+    private BigDecimal minCalciumPhosphorusRatio;
+
+    @Column(name = "max_calcium_phosphorus_ratio", precision = 5, scale = 2)
+    private BigDecimal maxCalciumPhosphorusRatio;
 }

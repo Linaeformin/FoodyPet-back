@@ -34,20 +34,58 @@ public class PetDailyDiet extends BaseTimeEntity {
 
     @Column(name = "total_calorie", precision = 8, scale = 2)
     private BigDecimal totalCalorie;
+
     @Column(name = "total_protein", precision = 8, scale = 2)
     private BigDecimal totalProtein;
+
     @Column(name = "total_fat", precision = 8, scale = 2)
     private BigDecimal totalFat;
+
     @Column(name = "total_ash", precision = 8, scale = 2)
     private BigDecimal totalAsh;
+
     @Column(name = "total_fiber", precision = 8, scale = 2)
     private BigDecimal totalFiber;
+
     @Column(name = "total_calcium", precision = 8, scale = 2)
     private BigDecimal totalCalcium;
+
     @Column(name = "total_phosphorus", precision = 8, scale = 2)
     private BigDecimal totalPhosphorus;
+
     @Column(name = "total_taurine", precision = 8, scale = 2)
     private BigDecimal totalTaurine;
+
     @Column(name = "calcium_phosphorus_ratio", precision = 5, scale = 2)
     private BigDecimal calciumPhosphorusRatio;
+
+    public static PetDailyDiet createRecommendedDiet(
+            Pet pet,
+            LocalDate dietDate,
+            FoodSource source,
+            BigDecimal totalCalorie,
+            BigDecimal totalProtein,
+            BigDecimal totalFat,
+            BigDecimal totalAsh,
+            BigDecimal totalFiber,
+            BigDecimal totalCalcium,
+            BigDecimal totalPhosphorus,
+            BigDecimal totalTaurine,
+            BigDecimal calciumPhosphorusRatio
+    ) {
+        PetDailyDiet diet = new PetDailyDiet();
+        diet.pet = pet;
+        diet.dietDate = dietDate;
+        diet.source = source;
+        diet.totalCalorie = totalCalorie;
+        diet.totalProtein = totalProtein;
+        diet.totalFat = totalFat;
+        diet.totalAsh = totalAsh;
+        diet.totalFiber = totalFiber;
+        diet.totalCalcium = totalCalcium;
+        diet.totalPhosphorus = totalPhosphorus;
+        diet.totalTaurine = totalTaurine;
+        diet.calciumPhosphorusRatio = calciumPhosphorusRatio;
+        return diet;
+    }
 }
