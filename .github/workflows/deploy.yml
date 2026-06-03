@@ -43,12 +43,27 @@ jobs:
           script: |
             cd /home/ubuntu/app
 
-            pkill -f '.jar' || true
+            mkdir -p /home/ubuntu/app/logs
 
-            JAR_NAME=$(ls /home/ubuntu/app/build/libs/*.jar | head -n 1)
+            echo "Stopping old application..."
+            pkill -f "java -jar .*foodypet.*\.jar" || true
 
+            echo "Finding jar file..."
+            JAR_NAME=$(ls /home/ubuntu/app/build/libs/*.jar | grep -v plain | head -n 1)
+
+            echo "Selected jar: $JAR_NAME"
+
+            echo "Loading environment variables..."
             set -a
             source /home/ubuntu/app/.env
             set +a
 
-            nohup java -jar $JAR_NAME > /home/ubuntu/app/logs/app.log 2>&1 &
+            echo "Starting application..."
+            nohup java -jar "$JAR_NAME" > /home/ubuntu/app/logs/app.log 2>&1 &
+
+            sleep 5
+
+            echo "Checking application process..."
+            pgrep -f "java -jar .*foodypet.*\.jar" || true
+
+            echo "Deploy finished."
