@@ -19,4 +19,6 @@ public interface PetFoodStockRepository extends JpaRepository<PetFoodStock, Long
 
     @EntityGraph(attributePaths = {"petFood"})
     List<PetFoodStock> findByUserIdAndPetFoodPetType(Long userId, PetType petType);
+
+    List<PetFoodStock> findByUser_IdAndPetFood_IdIn(Long userId, List<Long> petFoodIds);
 }

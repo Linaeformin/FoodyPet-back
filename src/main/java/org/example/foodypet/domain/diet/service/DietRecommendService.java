@@ -44,6 +44,8 @@ public class DietRecommendService {
     private final PetDailyDietRepository petDailyDietRepository;
     private final PetDailyDietItemRepository petDailyDietItemRepository;
 
+    private static final BigDecimal FINAL_REGISTER_FOOD_LIKE_DECREASE = new BigDecimal("5.0");
+
     private static final BigDecimal ZERO = BigDecimal.ZERO;
     private static final BigDecimal HUNDRED = new BigDecimal("100");
 
@@ -61,30 +63,35 @@ public class DietRecommendService {
     private static final BigDecimal CALCIUM_PHOSPHORUS_RATIO_WEIGHT = new BigDecimal("4.0");
 
     private static final BigDecimal TAURINE_MISSING_PENALTY = new BigDecimal("1.0");
-
     private static final BigDecimal FOOD_LIKE_WEIGHT = new BigDecimal("1.5");
-
     private static final BigDecimal REPEAT_FOOD_PENALTY = new BigDecimal("0.8000");
-
     private static final BigDecimal SIMILAR_SCORE_RANGE = new BigDecimal("0.0500");
 
     public DietRecommendSimpleResponse recommendAndSaveDiet(Long userId, DietRecommendRequest request) {
         Pet pet = petRepository.findByIdAndUserId(request.getPetId(), userId)
-                .orElseThrow(() -> new IllegalArgumentException("반려동물을 찾을 수 없어."));
+                .orElseThrow(() -> new IllegalArgumentException("반려동물을 찾을 수 없습니다."));
+
+        LocalDate dietDate = LocalDate.now();
+
+        boolean alreadyConfirmed = petDailyDietRepository
+                .existsByPet_IdAndDietDateAndIsConfirmedTrue(pet.getId(), dietDate);
+
+        if (alreadyConfirmed) {
+            throw new IllegalArgumentException("이미 최종 등록된 식단이 있어 추천을 다시 받을 수 없습니다.");
+        }
 
         PetNutritionStandard standard = nutritionStandardRepository.findByPetId(pet.getId())
-                .orElseThrow(() -> new IllegalArgumentException("반려동물 영양 기준표가 없어."));
+                .orElseThrow(() -> new IllegalArgumentException("반려동물 영양 기준표가 없습니다."));
 
         List<PetMealSchedule> schedules =
                 mealScheduleRepository.findByPetIdOrderByMealOrderAsc(pet.getId());
 
         if (schedules.isEmpty()) {
-            throw new IllegalArgumentException("등록된 급여 시간이 없어.");
+            throw new IllegalArgumentException("등록된 급여 시간이 없습니다.");
         }
 
         int mealCount = schedules.size();
         int maxFoodCountPerMeal = MAX_FOOD_COUNT_PER_MEAL;
-        LocalDate dietDate = LocalDate.now();
 
         List<PetFoodStock> stocks = petFoodStockRepository
                 .findByUserIdAndPetFoodPetType(userId, pet.getPetType())
@@ -128,22 +135,43 @@ public class DietRecommendService {
                 dailyTotal.phosphorus()
         );
 
-        PetDailyDiet savedDiet = PetDailyDiet.createRecommendedDiet(
-                pet,
-                dietDate,
-                FoodSource.SYSTEM,
-                dailyTotal.calorie(),
-                dailyTotal.protein(),
-                dailyTotal.fat(),
-                dailyTotal.ash(),
-                dailyTotal.fiber(),
-                dailyTotal.calcium(),
-                dailyTotal.phosphorus(),
-                dailyTotal.taurine(),
-                calciumPhosphorusRatio
-        );
+        PetDailyDiet savedDiet = petDailyDietRepository
+                .findByPet_IdAndDietDate(pet.getId(), dietDate)
+                .orElse(null);
 
-        petDailyDietRepository.save(savedDiet);
+        if (savedDiet != null) {
+            petDailyDietItemRepository.deleteByDailyDiet_Id(savedDiet.getId());
+
+            savedDiet.updateRecommendedDiet(
+                    FoodSource.SYSTEM,
+                    dailyTotal.calorie(),
+                    dailyTotal.protein(),
+                    dailyTotal.fat(),
+                    dailyTotal.ash(),
+                    dailyTotal.fiber(),
+                    dailyTotal.calcium(),
+                    dailyTotal.phosphorus(),
+                    dailyTotal.taurine(),
+                    calciumPhosphorusRatio
+            );
+        } else {
+            savedDiet = PetDailyDiet.createRecommendedDiet(
+                    pet,
+                    dietDate,
+                    FoodSource.SYSTEM,
+                    dailyTotal.calorie(),
+                    dailyTotal.protein(),
+                    dailyTotal.fat(),
+                    dailyTotal.ash(),
+                    dailyTotal.fiber(),
+                    dailyTotal.calcium(),
+                    dailyTotal.phosphorus(),
+                    dailyTotal.taurine(),
+                    calciumPhosphorusRatio
+            );
+
+            petDailyDietRepository.save(savedDiet);
+        }
 
         for (RecommendedMeal meal : recommendedMeals) {
             for (CalculatedFood food : meal.foods()) {
@@ -170,6 +198,39 @@ public class DietRecommendService {
         return toSimpleResponse(savedDiet, pet, recommendedMeals);
     }
 
+    public void confirmRecommendedDiet(Long userId, Long dietId) {
+        PetDailyDiet diet = petDailyDietRepository.findById(dietId)
+                .orElseThrow(() -> new IllegalArgumentException("식단을 찾을 수 없습니다."));
+
+        petRepository.findByIdAndUserId(diet.getPet().getId(), userId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 식단을 등록할 권한이 없습니다."));
+
+        if (Boolean.TRUE.equals(diet.getIsConfirmed())) {
+            return;
+        }
+
+        boolean alreadyConfirmed = petDailyDietRepository
+                .existsByPet_IdAndDietDateAndIsConfirmedTrue(
+                        diet.getPet().getId(),
+                        diet.getDietDate()
+                );
+
+        if (alreadyConfirmed) {
+            throw new IllegalArgumentException("해당 날짜에 이미 최종 등록된 식단이 있습니다.");
+        }
+
+        List<Long> petFoodIds = petDailyDietItemRepository.findPetFoodIdsByDailyDietId(dietId);
+
+        List<PetFoodStock> stocks = petFoodStockRepository
+                .findByUser_IdAndPetFood_IdIn(userId, petFoodIds);
+
+        stocks.forEach(stock ->
+                stock.decreaseFoodLike(FINAL_REGISTER_FOOD_LIKE_DECREASE)
+        );
+
+        diet.confirm();
+    }
+
     private DietRecommendSimpleResponse toSimpleResponse(
             PetDailyDiet savedDiet,
             Pet pet,
@@ -193,7 +254,7 @@ public class DietRecommendService {
 
         String description = foods.stream()
                 .map(DietRecommendSimpleResponse.FoodDto::getDisplayText)
-                .collect(java.util.stream.Collectors.joining(", "));
+                .collect(Collectors.joining(", "));
 
         return DietRecommendSimpleResponse.MealDto.builder()
                 .mealOrder(meal.mealOrder())
@@ -209,7 +270,6 @@ public class DietRecommendService {
                 .toPlainString();
 
         String unit = toDisplayUnit(food.unit());
-
         String displayText = food.petFood().getName() + " " + amount + unit;
 
         return DietRecommendSimpleResponse.FoodDto.builder()
@@ -248,7 +308,7 @@ public class DietRecommendService {
                 .values()
                 .stream()
                 .sorted(Comparator
-                        .comparing((PetFoodStock stock) -> stock.getPetFood().getFoodLike()).reversed()
+                        .comparing(PetFoodStock::getFoodLike).reversed()
                         .thenComparing(
                                 stock -> stock.getPetFood().getMetabolizableEnergyKcalPer100g(),
                                 Comparator.reverseOrder()
@@ -257,7 +317,7 @@ public class DietRecommendService {
                 .toList();
 
         if (candidateStocks.isEmpty()) {
-            throw new IllegalArgumentException("계산 가능한 식품 후보가 없어.");
+            throw new IllegalArgumentException("계산 가능한 식품 후보가 없습니다.");
         }
 
         List<RecommendedMeal> topMeals = new ArrayList<>();
@@ -280,7 +340,7 @@ public class DietRecommendService {
         }
 
         if (topMeals.isEmpty()) {
-            throw new IllegalArgumentException("추천 조합을 만들 수 없어.");
+            throw new IllegalArgumentException("추천 조합을 만들 수 없습니다.");
         }
 
         topMeals.sort(Comparator.comparing(RecommendedMeal::score));
@@ -402,7 +462,7 @@ public class DietRecommendService {
                 .divide(HUNDRED, 6, RoundingMode.HALF_UP);
 
         if (kcalPerGram.compareTo(ZERO) <= 0) {
-            throw new IllegalArgumentException("식품 칼로리 정보가 잘못됐어.");
+            throw new IllegalArgumentException("식품 칼로리 정보가 잘못됐습니다.");
         }
 
         BigDecimal targetCalorieForFood = targetCaloriePerMeal
@@ -440,7 +500,7 @@ public class DietRecommendService {
                 calcium,
                 phosphorus,
                 taurine,
-                food.getFoodLike()
+                stock.getFoodLike()
         );
     }
 

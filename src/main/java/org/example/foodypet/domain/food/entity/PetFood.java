@@ -74,7 +74,4 @@ public class PetFood extends BaseTimeEntity {
 
     @Column(name = "taurine_mg_per_100g", precision = 8, scale = 2)
     private BigDecimal taurineMgPer100g;
-
-    @Column(name = "food_like", precision = 5, scale = 2, nullable = false)
-    private BigDecimal foodLike = new BigDecimal("50.00");
 }

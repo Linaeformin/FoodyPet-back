@@ -32,6 +32,9 @@ public class PetDailyDiet extends BaseTimeEntity {
     @Column(nullable = false)
     private FoodSource source;
 
+    @Column(name = "is_confirmed", nullable = false)
+    private Boolean isConfirmed;
+
     @Column(name = "total_calorie", precision = 8, scale = 2)
     private BigDecimal totalCalorie;
 
@@ -77,6 +80,7 @@ public class PetDailyDiet extends BaseTimeEntity {
         diet.pet = pet;
         diet.dietDate = dietDate;
         diet.source = source;
+        diet.isConfirmed = false;
         diet.totalCalorie = totalCalorie;
         diet.totalProtein = totalProtein;
         diet.totalFat = totalFat;
@@ -87,5 +91,38 @@ public class PetDailyDiet extends BaseTimeEntity {
         diet.totalTaurine = totalTaurine;
         diet.calciumPhosphorusRatio = calciumPhosphorusRatio;
         return diet;
+    }
+
+
+    public void updateRecommendedDiet(
+            FoodSource source,
+            BigDecimal totalCalorie,
+            BigDecimal totalProtein,
+            BigDecimal totalFat,
+            BigDecimal totalAsh,
+            BigDecimal totalFiber,
+            BigDecimal totalCalcium,
+            BigDecimal totalPhosphorus,
+            BigDecimal totalTaurine,
+            BigDecimal calciumPhosphorusRatio
+    ) {
+        if (Boolean.TRUE.equals(this.isConfirmed)) {
+            throw new IllegalStateException("이미 최종 등록된 식단은 수정할 수 없어.");
+        }
+
+        this.source = source;
+        this.totalCalorie = totalCalorie;
+        this.totalProtein = totalProtein;
+        this.totalFat = totalFat;
+        this.totalAsh = totalAsh;
+        this.totalFiber = totalFiber;
+        this.totalCalcium = totalCalcium;
+        this.totalPhosphorus = totalPhosphorus;
+        this.totalTaurine = totalTaurine;
+        this.calciumPhosphorusRatio = calciumPhosphorusRatio;
+    }
+
+    public void confirm() {
+        this.isConfirmed = true;
     }
 }
