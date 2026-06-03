@@ -18,4 +18,6 @@ public interface PetDailyDietItemRepository extends JpaRepository<PetDailyDietIt
         where i.dailyDiet.id = :dietId
     """)
     List<Long> findPetFoodIdsByDailyDietId(@Param("dietId") Long dietId);
+
+    List<PetDailyDietItem> findByDailyDiet_Id(Long dailyDietId);
 }

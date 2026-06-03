@@ -1,10 +1,7 @@
 package org.example.foodypet.domain.diet.service;
 
 import lombok.RequiredArgsConstructor;
-import org.example.foodypet.domain.diet.dto.AnalysisStatus;
-import org.example.foodypet.domain.diet.dto.DietRecommendRequest;
-import org.example.foodypet.domain.diet.dto.DietRecommendResponse;
-import org.example.foodypet.domain.diet.dto.DietRecommendSimpleResponse;
+import org.example.foodypet.domain.diet.dto.*;
 import org.example.foodypet.domain.diet.entity.PetDailyDiet;
 import org.example.foodypet.domain.diet.entity.PetDailyDietItem;
 import org.example.foodypet.domain.diet.repository.PetDailyDietItemRepository;
@@ -851,5 +848,236 @@ public class DietRecommendService {
             NutritionSum nutritionSum,
             BigDecimal score
     ) {
+    }
+
+    public DietAnalysisResponse getDietAnalysis(Long userId, Long dietId) {
+        PetDailyDiet diet = petDailyDietRepository.findById(dietId)
+                .orElseThrow(() -> new IllegalArgumentException("식단을 찾을 수 없습니다."));
+
+        Pet pet = petRepository.findByIdAndUserId(diet.getPet().getId(), userId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 식단을 조회할 권한이 없습니다."));
+
+        PetNutritionStandard standard = nutritionStandardRepository.findByPetId(pet.getId())
+                .orElseThrow(() -> new IllegalArgumentException("반려동물 영양 기준표가 없습니다."));
+
+        List<PetDailyDietItem> items = petDailyDietItemRepository.findByDailyDiet_Id(dietId);
+
+        BigDecimal totalAmount = items.stream()
+                .map(PetDailyDietItem::getAmount)
+                .reduce(ZERO, BigDecimal::add);
+
+        List<DietAnalysisResponse.NutrientRatioDto> nutrientRatios =
+                buildNutrientRatios(diet, totalAmount);
+
+        List<DietAnalysisResponse.NutrientBarDto> nutrientBars = List.of(
+                buildNutrientBar(
+                        "칼로리",
+                        diet.getTotalCalorie(),
+                        standard.getRecommendedCalorie(),
+                        "kcal"
+                ),
+                buildNutrientBar(
+                        "단백질",
+                        diet.getTotalProtein(),
+                        standard.getRecommendedProtein(),
+                        "%"
+                ),
+                buildNutrientBar(
+                        "지방",
+                        diet.getTotalFat(),
+                        standard.getRecommendedFat(),
+                        "%"
+                ),
+                buildNutrientBar(
+                        "조회분",
+                        diet.getTotalAsh(),
+                        standard.getRecommendedAsh(),
+                        "%"
+                ),
+                buildNutrientBar(
+                        "조섬유",
+                        diet.getTotalFiber(),
+                        standard.getRecommendedFiber(),
+                        "%"
+                )
+        );
+
+        DietAnalysisResponse.CalciumPhosphorusDto calciumPhosphorus =
+                buildCalciumPhosphorus(diet);
+
+        DietAnalysisResponse.TaurineDto taurine =
+                buildTaurine(diet.getTotalTaurine());
+
+        return DietAnalysisResponse.builder()
+                .dailyDietId(diet.getId())
+                .petId(pet.getId())
+                .petName(pet.getPetName())
+                .dietDate(diet.getDietDate())
+                .title(pet.getPetName() + "의 하루 식단 분석")
+                .confirmed(diet.getIsConfirmed())
+                .canConfirm(!Boolean.TRUE.equals(diet.getIsConfirmed()))
+                .nutrientRatios(nutrientRatios)
+                .nutrientBars(nutrientBars)
+                .calciumPhosphorus(calciumPhosphorus)
+                .taurine(taurine)
+                .build();
+    }
+
+    private List<DietAnalysisResponse.NutrientRatioDto> buildNutrientRatios(
+            PetDailyDiet diet,
+            BigDecimal totalAmount
+    ) {
+        if (totalAmount == null || totalAmount.compareTo(ZERO) <= 0) {
+            return List.of();
+        }
+
+        BigDecimal proteinRatio = percentRatio(diet.getTotalProtein(), totalAmount);
+        BigDecimal fatRatio = percentRatio(diet.getTotalFat(), totalAmount);
+        BigDecimal ashRatio = percentRatio(diet.getTotalAsh(), totalAmount);
+        BigDecimal fiberRatio = percentRatio(diet.getTotalFiber(), totalAmount);
+        BigDecimal calciumRatio = percentRatio(diet.getTotalCalcium(), totalAmount);
+        BigDecimal phosphorusRatio = percentRatio(diet.getTotalPhosphorus(), totalAmount);
+
+        BigDecimal knownTotal = proteinRatio
+                .add(fatRatio)
+                .add(ashRatio)
+                .add(fiberRatio)
+                .add(calciumRatio)
+                .add(phosphorusRatio);
+
+        BigDecimal etcRatio = HUNDRED.subtract(knownTotal);
+
+        if (etcRatio.compareTo(ZERO) < 0) {
+            etcRatio = ZERO;
+        }
+
+        return List.of(
+                buildNutrientRatio("단백질", proteinRatio, "%"),
+                buildNutrientRatio("지방", fatRatio, "%"),
+                buildNutrientRatio("조회분", ashRatio, "%"),
+                buildNutrientRatio("조섬유", fiberRatio, "%"),
+                buildNutrientRatio("칼슘", calciumRatio, "%"),
+                buildNutrientRatio("인", phosphorusRatio, "%"),
+                buildNutrientRatio("기타", etcRatio, "%")
+        );
+    }
+
+    private DietAnalysisResponse.NutrientRatioDto buildNutrientRatio(
+            String name,
+            BigDecimal value,
+            String unit
+    ) {
+        BigDecimal safeValue = value != null ? value : ZERO;
+
+        return DietAnalysisResponse.NutrientRatioDto.builder()
+                .name(name)
+                .value(safeValue)
+                .unit(unit)
+                .displayText(name + "(" + formatDecimal(safeValue) + unit + ")")
+                .build();
+    }
+
+    private DietAnalysisResponse.NutrientBarDto buildNutrientBar(
+            String name,
+            BigDecimal value,
+            BigDecimal recommended,
+            String unit
+    ) {
+        BigDecimal safeValue = value != null ? value : ZERO;
+
+        AnalysisStatus status = analyze(safeValue, recommended);
+
+        return DietAnalysisResponse.NutrientBarDto.builder()
+                .name(name)
+                .value(safeValue)
+                .unit(unit)
+                .displayValue(formatDecimal(safeValue) + unit)
+                .percent(calculateProgressPercent(safeValue, recommended))
+                .status(status)
+                .statusText(toStatusText(status))
+                .build();
+    }
+
+    private DietAnalysisResponse.CalciumPhosphorusDto buildCalciumPhosphorus(PetDailyDiet diet) {
+        BigDecimal calcium = diet.getTotalCalcium() != null ? diet.getTotalCalcium() : ZERO;
+        BigDecimal phosphorus = diet.getTotalPhosphorus() != null ? diet.getTotalPhosphorus() : ZERO;
+
+        BigDecimal ratio = calculateCalciumPhosphorusRatio(calcium, phosphorus);
+        AnalysisStatus status = analyzeCalciumPhosphorusRatio(ratio);
+
+        String displayRatio = ratio == null
+                ? "-"
+                : formatDecimal(ratio) + " : 1";
+
+        return DietAnalysisResponse.CalciumPhosphorusDto.builder()
+                .calcium(calcium)
+                .phosphorus(phosphorus)
+                .ratio(ratio)
+                .displayRatio(displayRatio)
+                .status(status)
+                .statusText(toStatusText(status))
+                .build();
+    }
+
+    private DietAnalysisResponse.TaurineDto buildTaurine(BigDecimal taurine) {
+        BigDecimal safeTaurine = taurine != null ? taurine : ZERO;
+        AnalysisStatus status = analyzeTaurineIncluded(safeTaurine);
+
+        return DietAnalysisResponse.TaurineDto.builder()
+                .value(safeTaurine)
+                .unit("mg")
+                .displayValue(formatDecimal(safeTaurine) + "mg")
+                .status(status)
+                .statusText(toStatusText(status))
+                .build();
+    }
+
+    private BigDecimal percentRatio(BigDecimal value, BigDecimal totalAmount) {
+        if (value == null || totalAmount == null || totalAmount.compareTo(ZERO) == 0) {
+            return ZERO;
+        }
+
+        return value.multiply(HUNDRED)
+                .divide(totalAmount, 1, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal calculateProgressPercent(BigDecimal actual, BigDecimal recommended) {
+        if (actual == null || recommended == null || recommended.compareTo(ZERO) == 0) {
+            return ZERO;
+        }
+
+        BigDecimal percent = actual.multiply(HUNDRED)
+                .divide(recommended, 1, RoundingMode.HALF_UP);
+
+        if (percent.compareTo(HUNDRED) > 0) {
+            return HUNDRED;
+        }
+
+        if (percent.compareTo(ZERO) < 0) {
+            return ZERO;
+        }
+
+        return percent;
+    }
+
+    private String toStatusText(AnalysisStatus status) {
+        if (status == null) {
+            return "알 수 없음";
+        }
+
+        return switch (status) {
+            case GOOD -> "양호";
+            case LACK -> "부족";
+            case EXCESS -> "많음";
+            case UNKNOWN -> "알 수 없음";
+        };
+    }
+
+    private String formatDecimal(BigDecimal value) {
+        if (value == null) {
+            return "0";
+        }
+
+        return value.stripTrailingZeros().toPlainString();
     }
 }
