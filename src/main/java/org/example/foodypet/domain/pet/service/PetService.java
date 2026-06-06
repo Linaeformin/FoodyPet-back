@@ -2,6 +2,7 @@ package org.example.foodypet.domain.pet.service;
 
 import lombok.RequiredArgsConstructor;
 import org.example.foodypet.domain.pet.dto.PetAssignFormDto;
+import org.example.foodypet.domain.pet.dto.PetCapsuleIntakeListResponseDto;
 import org.example.foodypet.domain.pet.dto.PetCapsuleIntakeRequestDto;
 import org.example.foodypet.domain.pet.entity.*;
 import org.example.foodypet.domain.pet.repository.*;
@@ -14,6 +15,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -276,6 +279,30 @@ public class PetService {
                             )
                     );
         }
+    }
+
+    @Transactional(readOnly = true)
+    public PetCapsuleIntakeListResponseDto getTodayCapsuleIntakes(Long userId, Long petId) {
+        Pet pet = getMyPet(userId, petId);
+
+        LocalDate today = LocalDate.now();
+
+        List<PetCapsule> petCapsules = petCapsuleRepository.findAllByPetIdOrderByIdAsc(pet.getId());
+
+        List<PetCapsuleIntake> todayIntakes =
+                petCapsuleIntakeRepository.findAllByPetCapsulePetIdAndIntakeDate(pet.getId(), today);
+
+        Map<Long, PetCapsuleIntake> intakeMap = todayIntakes.stream()
+                .collect(Collectors.toMap(
+                        intake -> intake.getPetCapsule().getId(),
+                        intake -> intake
+                ));
+
+        return PetCapsuleIntakeListResponseDto.of(
+                pet.getId(),
+                petCapsules,
+                intakeMap
+        );
     }
 
     private Pet getMyPet(Long userId, Long petId) {
