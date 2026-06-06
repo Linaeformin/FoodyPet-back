@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.foodypet.domain.pet.entity.Pet;
 import org.example.foodypet.domain.pet.repository.PetRepository;
 import org.example.foodypet.domain.water.dto.WaterIntakeRequestDto;
+import org.example.foodypet.domain.water.dto.WaterIntakeResponseDto;
 import org.example.foodypet.domain.water.entity.PetWaterIntake;
 import org.example.foodypet.domain.water.entity.PetWaterIntakeItem;
 import org.example.foodypet.domain.water.repository.PetWaterIntakeItemRepository;
@@ -25,8 +26,7 @@ public class WaterIntakeService {
     private final PetWaterIntakeItemRepository petWaterIntakeItemRepository;
 
     public void updateTodayWaterIntake(Long userId, Long petId, WaterIntakeRequestDto requestDto) {
-        Pet pet = petRepository.findByIdAndUserId(petId, userId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 반려동물을 찾을 수 없습니다."));
+        Pet pet = getMyPet(userId, petId);
 
         LocalDate today = LocalDate.now();
 
@@ -50,5 +50,30 @@ public class WaterIntakeService {
                 .toList();
 
         petWaterIntakeItemRepository.saveAll(items);
+    }
+
+    @Transactional(readOnly = true)
+    public WaterIntakeResponseDto getTodayWaterIntake(Long userId, Long petId) {
+        Pet pet = getMyPet(userId, petId);
+
+        LocalDate today = LocalDate.now();
+
+        return petWaterIntakeRepository.findByPetIdAndIntakeDate(petId, today)
+                .map(waterIntake -> {
+                    List<PetWaterIntakeItem> items =
+                            petWaterIntakeItemRepository.findAllByWaterIntakeOrderByIdAsc(waterIntake);
+
+                    return WaterIntakeResponseDto.of(
+                            pet.getId(),
+                            waterIntake.getTotalAmountMl(),
+                            items
+                    );
+                })
+                .orElseGet(() -> WaterIntakeResponseDto.empty(pet.getId()));
+    }
+
+    private Pet getMyPet(Long userId, Long petId) {
+        return petRepository.findByIdAndUserId(petId, userId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 반려동물을 찾을 수 없습니다."));
     }
 }

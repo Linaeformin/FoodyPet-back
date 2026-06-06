@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.foodypet.common.config.ApiSuccess;
 import org.example.foodypet.common.config.CustomUserDetails;
 import org.example.foodypet.domain.water.dto.WaterIntakeRequestDto;
+import org.example.foodypet.domain.water.dto.WaterIntakeResponseDto;
 import org.example.foodypet.domain.water.service.WaterIntakeService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,5 +29,13 @@ public class WaterIntakeController {
         return ResponseEntity
                 .status(201)
                 .body(new ApiSuccess(201, "성공적으로 처리되었습니다."));
+    }
+
+    @GetMapping("/{petId}/water-intakes")
+    public WaterIntakeResponseDto getTodayWaterIntake(
+            @AuthenticationPrincipal CustomUserDetails me,
+            @PathVariable Long petId
+    ) {
+        return waterIntakeService.getTodayWaterIntake(me.getId(), petId);
     }
 }
