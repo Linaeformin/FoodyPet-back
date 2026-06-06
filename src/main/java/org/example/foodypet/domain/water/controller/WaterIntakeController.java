@@ -24,7 +24,7 @@ public class WaterIntakeController {
             @PathVariable Long petId,
             @Valid @RequestBody WaterIntakeRequestDto requestDto
     ) {
-        waterIntakeService.addWaterIntake(me.getId(), petId, requestDto);
+        waterIntakeService.updateTodayWaterIntake(me.getId(), petId, requestDto);
         return ResponseEntity
                 .status(201)
                 .body(new ApiSuccess(201, "성공적으로 처리되었습니다."));

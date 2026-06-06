@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -23,7 +24,7 @@ public class WaterIntakeService {
     private final PetWaterIntakeRepository petWaterIntakeRepository;
     private final PetWaterIntakeItemRepository petWaterIntakeItemRepository;
 
-    public void addWaterIntake(Long userId, Long petId, WaterIntakeRequestDto requestDto) {
+    public void updateTodayWaterIntake(Long userId, Long petId, WaterIntakeRequestDto requestDto) {
         Pet pet = petRepository.findByIdAndUserId(petId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 반려동물을 찾을 수 없습니다."));
 
@@ -35,15 +36,19 @@ public class WaterIntakeService {
                         PetWaterIntake.create(pet, today)
                 ));
 
+        petWaterIntakeItemRepository.deleteByWaterIntake(waterIntake);
+
         BigDecimal totalAmount = requestDto.getAmountsMl()
                 .stream()
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        waterIntake.addAmount(totalAmount);
+        waterIntake.updateTotalAmount(totalAmount);
 
-        requestDto.getAmountsMl().forEach(amountMl -> {
-            PetWaterIntakeItem item = PetWaterIntakeItem.create(waterIntake, amountMl);
-            petWaterIntakeItemRepository.save(item);
-        });
+        List<PetWaterIntakeItem> items = requestDto.getAmountsMl()
+                .stream()
+                .map(amountMl -> PetWaterIntakeItem.create(waterIntake, amountMl))
+                .toList();
+
+        petWaterIntakeItemRepository.saveAll(items);
     }
 }

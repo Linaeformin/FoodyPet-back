@@ -50,4 +50,13 @@ public class PetWaterIntake extends BaseTimeEntity {
 
         this.totalAmountMl = this.totalAmountMl.add(amountMl);
     }
+
+    public void updateTotalAmount(BigDecimal totalAmountMl) {
+        if (totalAmountMl == null || totalAmountMl.compareTo(BigDecimal.ZERO) < 0) {
+            this.totalAmountMl = BigDecimal.ZERO;
+            return;
+        }
+
+        this.totalAmountMl = totalAmountMl;
+    }
 }
