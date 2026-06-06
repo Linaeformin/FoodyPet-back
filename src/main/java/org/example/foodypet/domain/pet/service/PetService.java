@@ -2,11 +2,9 @@ package org.example.foodypet.domain.pet.service;
 
 import lombok.RequiredArgsConstructor;
 import org.example.foodypet.domain.pet.dto.PetAssignFormDto;
+import org.example.foodypet.domain.pet.dto.PetCapsuleIntakeRequestDto;
 import org.example.foodypet.domain.pet.entity.*;
-import org.example.foodypet.domain.pet.repository.PetCapsuleRepository;
-import org.example.foodypet.domain.pet.repository.PetMealScheduleRepository;
-import org.example.foodypet.domain.pet.repository.PetNutritionStandardRepository;
-import org.example.foodypet.domain.pet.repository.PetRepository;
+import org.example.foodypet.domain.pet.repository.*;
 import org.example.foodypet.domain.user.entity.User;
 import org.example.foodypet.domain.user.repository.UsersRepository;
 import org.springframework.stereotype.Service;
@@ -14,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -26,6 +25,7 @@ public class PetService {
     private final PetMealScheduleRepository petMealScheduleRepository;
     private final PetCapsuleRepository petCapsuleRepository;
     private final PetNutritionStandardRepository petNutritionStandardRepository;
+    private final PetCapsuleIntakeRepository petCapsuleIntakeRepository;
 
     public void assignPet(Long userId, PetAssignFormDto petAssignFormDto) {
         User user = userRepository.findById(userId)
@@ -249,5 +249,37 @@ public class PetService {
             BigDecimal recommendedAsh,
             BigDecimal recommendedFiber
     ) {
+    }
+
+    public void updateTodayCapsuleIntakes(Long userId, Long petId, PetCapsuleIntakeRequestDto requestDto) {
+        getMyPet(userId, petId);
+
+        LocalDate today = LocalDate.now();
+
+        for (PetCapsuleIntakeRequestDto.CapsuleIntakeItem item : requestDto.getCapsuleIntakes()) {
+            PetCapsule petCapsule = petCapsuleRepository.findByIdAndPetId(
+                            item.getPetCapsuleId(),
+                            petId
+                    )
+                    .orElseThrow(() -> new IllegalArgumentException("해당 영양제를 찾을 수 없습니다."));
+
+            petCapsuleIntakeRepository
+                    .findByPetCapsuleIdAndIntakeDate(item.getPetCapsuleId(), today)
+                    .ifPresentOrElse(
+                            intake -> intake.updateGivenCount(item.getGivenCount()),
+                            () -> petCapsuleIntakeRepository.save(
+                                    PetCapsuleIntake.create(
+                                            petCapsule,
+                                            today,
+                                            item.getGivenCount()
+                                    )
+                            )
+                    );
+        }
+    }
+
+    private Pet getMyPet(Long userId, Long petId) {
+        return petRepository.findByIdAndUserId(petId, userId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 반려동물을 찾을 수 없습니다."));
     }
 }

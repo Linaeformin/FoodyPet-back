@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.foodypet.common.config.ApiSuccess;
 import org.example.foodypet.common.config.CustomUserDetails;
 import org.example.foodypet.domain.pet.dto.PetAssignFormDto;
+import org.example.foodypet.domain.pet.dto.PetCapsuleIntakeRequestDto;
 import org.example.foodypet.domain.pet.service.PetService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,6 +24,19 @@ public class PetController {
             @Valid @RequestBody PetAssignFormDto petAssignFormDto
     ) {
         petService.assignPet(me.getId(), petAssignFormDto);
+
+        return ResponseEntity
+                .status(201)
+                .body(new ApiSuccess(201, "성공적으로 처리되었습니다."));
+    }
+
+    @PostMapping("/{petId}/capsule-intakes")
+    public ResponseEntity<?> updateTodayCapsuleIntakes(
+            @AuthenticationPrincipal CustomUserDetails me,
+            @PathVariable Long petId,
+            @Valid @RequestBody PetCapsuleIntakeRequestDto requestDto
+    ) {
+        petService.updateTodayCapsuleIntakes(me.getId(), petId, requestDto);
 
         return ResponseEntity
                 .status(201)

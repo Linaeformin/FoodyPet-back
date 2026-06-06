@@ -29,4 +29,16 @@ public class PetCapsuleIntake extends BaseTimeEntity {
 
     @Column(name = "given_count", nullable = false)
     private Integer givenCount = 0;
+
+    public static PetCapsuleIntake create(PetCapsule petCapsule, LocalDate intakeDate, Integer givenCount) {
+        PetCapsuleIntake intake = new PetCapsuleIntake();
+        intake.petCapsule = petCapsule;
+        intake.intakeDate = intakeDate;
+        intake.givenCount = givenCount;
+        return intake;
+    }
+
+    public void updateGivenCount(Integer givenCount) {
+        this.givenCount = givenCount;
+    }
 }
