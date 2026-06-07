@@ -10,4 +10,5 @@ public interface PetCapsuleRepository extends JpaRepository<PetCapsule, Long> {
     List<PetCapsule> findByPetId(Long petId);
     Optional<PetCapsule> findByIdAndPetId(Long id, Long petId);
     List<PetCapsule> findAllByPetIdOrderByIdAsc(Long petId);
+    List<PetCapsule> findByPet_Id(Long petId);
 }

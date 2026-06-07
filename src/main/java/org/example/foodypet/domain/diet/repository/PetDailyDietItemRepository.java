@@ -27,4 +27,9 @@ public interface PetDailyDietItemRepository extends JpaRepository<PetDailyDietIt
     List<PetDailyDietItem> findByDailyDietIdInOrderByMealOrderAscIdAsc(
             Collection<Long> dailyDietIds
     );
+
+    List<PetDailyDietItem> findByDailyDiet_IdAndMealOrderOrderByIdAsc(
+            Long dailyDietId,
+            Integer mealOrder
+    );
 }

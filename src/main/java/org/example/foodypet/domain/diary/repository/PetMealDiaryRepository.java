@@ -30,4 +30,14 @@ public interface PetMealDiaryRepository extends JpaRepository<PetMealDiary, Long
             @Param("petId") Long petId,
             @Param("diaryDate") LocalDate diaryDate
     );
+
+    List<PetMealDiary> findByPet_IdAndDiaryDateOrderByCreatedAtDesc(
+            Long petId,
+            LocalDate diaryDate
+    );
+
+    Integer countByPet_IdAndDiaryDate(
+            Long petId,
+            LocalDate diaryDate
+    );
 }

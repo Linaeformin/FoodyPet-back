@@ -14,4 +14,10 @@ public interface PetCapsuleIntakeRepository extends JpaRepository<PetCapsuleInta
             Long petId,
             LocalDate intakeDate
     );
+
+    List<PetCapsuleIntake> findByPetCapsule_Pet_IdAndIntakeDate(
+            Long petId,
+            LocalDate intakeDate
+    );
+
 }
