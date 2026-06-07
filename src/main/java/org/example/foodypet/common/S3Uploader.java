@@ -12,7 +12,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import java.io.IOException;
 import java.util.UUID;
 
-@Profile("prod")
+@Profile({"prod", "local"})
 @Component
 @RequiredArgsConstructor
 public class S3Uploader {
@@ -31,9 +31,17 @@ public class S3Uploader {
         String extension = getExtension(originalFilename);
         String key = "meal-diaries/" + UUID.randomUUID() + extension;
 
+        String bucketName = bucket == null ? null : bucket.trim();
+
+        System.out.println("===== S3 UPLOAD CHECK =====");
+        System.out.println("bucket = [" + bucketName + "]");
+        System.out.println("fileName = [" + file.getOriginalFilename() + "]");
+        System.out.println("contentType = [" + file.getContentType() + "]");
+        System.out.println("===========================");
+
         try {
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                    .bucket(bucket)
+                    .bucket(bucketName)
                     .key(key)
                     .contentType(file.getContentType())
                     .build();
@@ -43,7 +51,7 @@ public class S3Uploader {
                     RequestBody.fromBytes(file.getBytes())
             );
 
-            return "https://" + bucket + ".s3.ap-northeast-2.amazonaws.com/" + key;
+            return "https://" + bucketName + ".s3.ap-southeast-2.amazonaws.com/" + key;
 
         } catch (IOException e) {
             throw new RuntimeException("식단 일기 이미지를 업로드할 수 없습니다.", e);

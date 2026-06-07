@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 
 public interface PetDailyDietItemRepository extends JpaRepository<PetDailyDietItem, Long> {
@@ -22,4 +23,13 @@ public interface PetDailyDietItemRepository extends JpaRepository<PetDailyDietIt
     List<PetDailyDietItem> findByDailyDiet_Id(Long dailyDietId);
 
     List<PetDailyDietItem> findByDailyDietIdOrderByMealOrderAscIdAsc(Long dailyDietId);
+
+    List<PetDailyDietItem> findByDailyDietIdInOrderByMealOrderAscIdAsc(
+            Collection<Long> dailyDietIds
+    );
+
+    List<PetDailyDietItem> findByDailyDiet_IdAndMealOrderOrderByIdAsc(
+            Long dailyDietId,
+            Integer mealOrder
+    );
 }
