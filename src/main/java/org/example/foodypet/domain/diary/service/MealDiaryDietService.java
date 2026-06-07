@@ -2,6 +2,8 @@ package org.example.foodypet.domain.diary.service;
 
 import lombok.RequiredArgsConstructor;
 import org.example.foodypet.common.S3Uploader;
+import org.example.foodypet.domain.diary.dto.MealDiaryFoodResponse;
+import org.example.foodypet.domain.diary.dto.MealDiaryResponse;
 import org.example.foodypet.domain.diary.dto.MealDiaryWriteFormResponse;
 import org.example.foodypet.domain.diary.dto.PetMealDiaryCreateRequest;
 import org.example.foodypet.domain.diary.entity.PetMealDiary;
@@ -29,6 +31,7 @@ import org.example.foodypet.domain.water.repository.PetWaterIntakeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.LinkedHashMap;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -379,5 +382,70 @@ public class MealDiaryDietService {
         }
 
         return amount.stripTrailingZeros().toPlainString();
+    }
+
+    public List<MealDiaryResponse> getTodayMealDiaries(Long userId, Long petId) {
+        return getMealDiariesByDate(userId, petId, LocalDate.now());
+    }
+
+    public List<MealDiaryResponse> getMealDiariesByDate(Long userId, Long petId, LocalDate date) {
+        validatePetOwner(userId, petId);
+
+        List<PetMealDiary> diaries = petMealDiaryRepository.findMealDiariesByPetIdAndDate(
+                petId,
+                date
+        );
+
+        if (diaries.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> dailyDietIds = diaries.stream()
+                .map(diary -> diary.getDailyDiet().getId())
+                .distinct()
+                .toList();
+
+        List<PetDailyDietItem> dietItems = petDailyDietItemRepository
+                .findByDailyDietIdInOrderByMealOrderAscIdAsc(dailyDietIds);
+
+        Map<DietItemKey, List<PetDailyDietItem>> dietItemMap = dietItems.stream()
+                .collect(Collectors.groupingBy(
+                        item -> new DietItemKey(
+                                item.getDailyDiet().getId(),
+                                item.getMealOrder()
+                        ),
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
+
+        return diaries.stream()
+                .map(diary -> {
+                    Long dailyDietId = diary.getDailyDiet().getId();
+                    Integer mealOrder = diary.getPetMealSchedule().getMealOrder();
+
+                    List<MealDiaryFoodResponse> foods = dietItemMap
+                            .getOrDefault(new DietItemKey(dailyDietId, mealOrder), List.of())
+                            .stream()
+                            .map(MealDiaryFoodResponse::from)
+                            .toList();
+
+                    return MealDiaryResponse.of(diary, foods);
+                })
+                .toList();
+    }
+
+    private void validatePetOwner(Long userId, Long petId) {
+        Pet pet = petRepository.findById(petId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 반려동물입니다."));
+
+        if (!pet.getUser().getId().equals(userId)) {
+            throw new IllegalArgumentException("해당 반려동물에 접근할 권한이 없습니다.");
+        }
+    }
+
+    private record DietItemKey(
+            Long dailyDietId,
+            Integer mealOrder
+    ) {
     }
 }

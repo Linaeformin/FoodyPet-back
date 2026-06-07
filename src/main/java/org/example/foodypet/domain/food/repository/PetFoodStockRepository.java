@@ -21,4 +21,15 @@ public interface PetFoodStockRepository extends JpaRepository<PetFoodStock, Long
     List<PetFoodStock> findByUserIdAndPetFoodPetType(Long userId, PetType petType);
 
     List<PetFoodStock> findByUser_IdAndPetFood_IdIn(Long userId, List<Long> petFoodIds);
+    @EntityGraph(attributePaths = {"petFood"})
+    List<PetFoodStock> findByUserIdAndIsTreatTrueAndPetFood_NameContainingIgnoreCase(
+            Long userId,
+            String keyword
+    );
+
+    @EntityGraph(attributePaths = {"petFood"})
+    Optional<PetFoodStock> findByIdAndUserIdAndIsTreatTrue(
+            Long stockId,
+            Long userId
+    );
 }

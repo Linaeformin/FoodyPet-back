@@ -33,4 +33,19 @@ public class PetTreatDiaryItem {
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    public static PetTreatDiaryItem create(
+            PetTreatDiary treatDiary,
+            PetFood petFood,
+            BigDecimal amount,
+            Unit unit
+    ) {
+        PetTreatDiaryItem item = new PetTreatDiaryItem();
+        item.treatDiary = treatDiary;
+        item.petFood = petFood;
+        item.amount = amount;
+        item.unit = unit;
+        item.createdAt = LocalDateTime.now();
+        return item;
+    }
 }

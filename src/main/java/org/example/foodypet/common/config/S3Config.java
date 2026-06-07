@@ -1,5 +1,6 @@
 package org.example.foodypet.common.config;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,10 +20,23 @@ public class S3Config {
     @Value("${cloud.aws.credentials.secret-key}")
     private String secretKey;
 
+    @Value("${cloud.aws.region.static}")
+    private String region;
+
+    @PostConstruct
+    public void init() {
+        System.out.println("===== S3 CONFIG LOADED =====");
+        System.out.println("region = [" + region + "]");
+        System.out.println("accessKey prefix = [" + accessKey.substring(0, 4) + "****]");
+        System.out.println("============================");
+    }
+
     @Bean
     public S3Client s3Client() {
+        System.out.println("===== S3 CLIENT CREATED =====");
+
         return S3Client.builder()
-                .region(Region.AP_NORTHEAST_2)
+                .region(Region.of(region))
                 .credentialsProvider(
                         StaticCredentialsProvider.create(
                                 AwsBasicCredentials.create(accessKey, secretKey)
