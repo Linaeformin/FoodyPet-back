@@ -65,4 +65,34 @@ public class S3Uploader {
 
         return filename.substring(filename.lastIndexOf("."));
     }
+
+    public String uploadPetImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("반려동물 이미지는 필수입니다.");
+        }
+
+        String originalFilename = file.getOriginalFilename();
+        String extension = getExtension(originalFilename);
+        String key = "pets/" + UUID.randomUUID() + extension;
+
+        String bucketName = bucket == null ? null : bucket.trim();
+
+        try {
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .contentType(file.getContentType())
+                    .build();
+
+            s3Client.putObject(
+                    putObjectRequest,
+                    RequestBody.fromBytes(file.getBytes())
+            );
+
+            return "https://" + bucketName + ".s3.ap-southeast-2.amazonaws.com/" + key;
+
+        } catch (IOException e) {
+            throw new RuntimeException("반려동물 이미지를 업로드할 수 없습니다.", e);
+        }
+    }
 }

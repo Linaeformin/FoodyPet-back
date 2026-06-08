@@ -49,9 +49,6 @@ public class PetAssignFormDto {
         @DecimalMax(value = "100.0", message = "몸무게는 100kg 이하로 입력해주세요.")
         private BigDecimal weightKg;
 
-        @NotBlank(message = "반려동물 이미지는 필수입니다.")
-        private String imageUrl;
-
         @NotNull(message = "반려동물 타입은 필수입니다.")
         private PetType petType;
 

@@ -17,6 +17,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.example.foodypet.common.S3Uploader;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -29,10 +31,13 @@ public class PetService {
     private final PetCapsuleRepository petCapsuleRepository;
     private final PetNutritionStandardRepository petNutritionStandardRepository;
     private final PetCapsuleIntakeRepository petCapsuleIntakeRepository;
+    private final S3Uploader s3Uploader;
 
-    public void assignPet(Long userId, PetAssignFormDto petAssignFormDto) {
+    public void assignPet(Long userId, PetAssignFormDto petAssignFormDto, MultipartFile image) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        String imageUrl = s3Uploader.uploadPetImage(image);
 
         PetAssignFormDto.PetInfoDto petInfo = petAssignFormDto.getPetInfo();
 
@@ -45,7 +50,7 @@ public class PetService {
         pet.setPetName(petInfo.getName());
         pet.setBirth(petInfo.getBirthDate());
         pet.setWeightKg(petInfo.getWeightKg());
-        pet.setPetImg(petInfo.getImageUrl());
+        pet.setPetImg(imageUrl);
         pet.setPetType(petInfo.getPetType());
         pet.setDogBreed(petInfo.getDogBreed());
         pet.setCatBreed(petInfo.getCatBreed());
@@ -56,7 +61,7 @@ public class PetService {
         petRepository.save(pet);
 
         if (isFirstPet) {
-            user.updateUserImg(petInfo.getImageUrl());
+            user.updateUserImg(imageUrl);
         }
 
         saveMealSchedules(pet, petAssignFormDto.getMealInfo());
