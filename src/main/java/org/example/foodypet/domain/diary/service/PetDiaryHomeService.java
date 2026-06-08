@@ -1,8 +1,10 @@
 package org.example.foodypet.domain.diary.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.foodypet.common.config.CustomUserDetails;
 import org.example.foodypet.domain.diary.dto.PetTodayDiaryHomeResponse;
+import org.example.foodypet.domain.diary.entity.PetMealDiary;
 import org.example.foodypet.domain.diary.repository.PetMealDiaryRepository;
 import org.example.foodypet.domain.diary.repository.PetTreatDiaryRepository;
 import org.example.foodypet.domain.diet.entity.PetDailyDiet;
@@ -30,6 +32,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -54,11 +57,17 @@ public class PetDiaryHomeService {
         LocalDate today = LocalDate.now(KOREA_ZONE);
         Long userId = me.getId();
 
+        log.info("[홈 조회 시작] userId={}, today={}", userId, today);
+
         List<Pet> pets = petRepository.findByUser_IdOrderByIdAsc(userId);
+
+        log.info("[홈 조회 반려동물] userId={}, petCount={}", userId, pets.size());
 
         List<PetTodayDiaryHomeResponse.PetHome> petHomes = pets.stream()
                 .map(pet -> createPetHome(pet, today))
                 .toList();
+
+        log.info("[홈 조회 완료] userId={}, today={}", userId, today);
 
         return new PetTodayDiaryHomeResponse(petHomes);
     }
@@ -69,6 +78,13 @@ public class PetDiaryHomeService {
     ) {
         Long petId = pet.getId();
 
+        log.info(
+                "[홈 펫 처리] petId={}, petName={}, today={}",
+                petId,
+                pet.getPetName(),
+                today
+        );
+
         return new PetTodayDiaryHomeResponse.PetHome(
                 pet.getId(),
                 pet.getPetName(),
@@ -78,6 +94,14 @@ public class PetDiaryHomeService {
         );
     }
 
+    /**
+     * 해당 펫의 오늘 남은 바로 식단
+     *
+     * 기준:
+     * 1. 오늘 확정 식단 조회
+     * 2. 그 식단에서 아직 식단 일기가 작성되지 않은 가장 빠른 mealSchedule 조회
+     * 3. 해당 schedule의 mealOrder로 dailyDietItem 조회
+     */
     private PetTodayDiaryHomeResponse.TodayMeal getTodayMeal(
             Long petId,
             LocalDate today
@@ -90,6 +114,12 @@ public class PetDiaryHomeService {
                 .orElse(null);
 
         if (dailyDiet == null) {
+            log.info(
+                    "[홈 오늘 식단] 오늘 확정 식단 없음 petId={}, today={}",
+                    petId,
+                    today
+            );
+
             return new PetTodayDiaryHomeResponse.TodayMeal(
                     null,
                     null,
@@ -100,6 +130,13 @@ public class PetDiaryHomeService {
             );
         }
 
+        log.info(
+                "[홈 오늘 식단] dailyDietId={}, petId={}, dietDate={}",
+                dailyDiet.getId(),
+                petId,
+                dailyDiet.getDietDate()
+        );
+
         List<PetMealSchedule> schedules =
                 petMealScheduleRepository.findOldestNotWrittenSchedule(
                         petId,
@@ -109,6 +146,13 @@ public class PetDiaryHomeService {
                 );
 
         if (schedules.isEmpty()) {
+            log.info(
+                    "[홈 오늘 식단] 미작성 급여 스케줄 없음 petId={}, dailyDietId={}, today={}",
+                    petId,
+                    dailyDiet.getId(),
+                    today
+            );
+
             return new PetTodayDiaryHomeResponse.TodayMeal(
                     dailyDiet.getId(),
                     null,
@@ -131,6 +175,15 @@ public class PetDiaryHomeService {
                 .map(PetTodayDiaryHomeResponse.TodayMealFood::getDisplayText)
                 .collect(Collectors.joining(", "));
 
+        log.info(
+                "[홈 오늘 식단] 다음 식단 petId={}, dailyDietId={}, petMealScheduleId={}, mealOrder={}, mealTime={}",
+                petId,
+                dailyDiet.getId(),
+                schedule.getId(),
+                schedule.getMealOrder(),
+                schedule.getMealTime()
+        );
+
         return new PetTodayDiaryHomeResponse.TodayMeal(
                 dailyDiet.getId(),
                 schedule.getId(),
@@ -150,6 +203,13 @@ public class PetDiaryHomeService {
                         dailyDietId,
                         mealOrder
                 );
+
+        log.info(
+                "[홈 오늘 식단 음식] dailyDietId={}, mealOrder={}, foodCount={}",
+                dailyDietId,
+                mealOrder,
+                items.size()
+        );
 
         return items.stream()
                 .map(item -> {
@@ -183,14 +243,54 @@ public class PetDiaryHomeService {
         );
     }
 
+    /**
+     * 밥 일기 카드
+     *
+     * targetCount = 해당 펫의 하루 급여 횟수
+     * givenCount = 오늘 해당 펫의 식단 일기 작성 횟수
+     *
+     * count 메서드 따로 안 쓰고, 오늘 밥 일기 목록을 직접 조회해서 size로 계산함.
+     * 이러면 실제 잡힌 row id, schedule id까지 로그로 확인 가능함.
+     */
     private PetTodayDiaryHomeResponse.MealDiary getMealDiarySummary(
             Long petId,
             LocalDate today
     ) {
         Integer targetCount = petMealScheduleRepository.countByPet_Id(petId);
-        Integer givenCount = petMealDiaryRepository.countByPet_IdAndDiaryDate(
+
+        List<PetMealDiary> todayMealDiaries =
+                petMealDiaryRepository.findByPet_IdAndDiaryDateOrderByCreatedAtDesc(
+                        petId,
+                        today
+                );
+
+        Integer givenCount = todayMealDiaries.size();
+
+        String diaryDebugText = todayMealDiaries.stream()
+                .map(diary -> {
+                    Long diaryId = diary.getId();
+                    Long dailyDietId = diary.getDailyDiet() != null
+                            ? diary.getDailyDiet().getId()
+                            : null;
+                    Long scheduleId = diary.getPetMealSchedule() != null
+                            ? diary.getPetMealSchedule().getId()
+                            : null;
+
+                    return "{diaryId=" + diaryId
+                            + ", dailyDietId=" + dailyDietId
+                            + ", petMealScheduleId=" + scheduleId
+                            + ", diaryDate=" + diary.getDiaryDate()
+                            + "}";
+                })
+                .collect(Collectors.joining(", "));
+
+        log.info(
+                "[홈 밥일기 카운트] petId={}, today={}, givenCount={}, targetCount={}, diaries=[{}]",
                 petId,
-                today
+                today,
+                givenCount,
+                targetCount,
+                diaryDebugText
         );
 
         return new PetTodayDiaryHomeResponse.MealDiary(
@@ -201,25 +301,51 @@ public class PetDiaryHomeService {
         );
     }
 
+    /**
+     * 물 카드
+     */
     private PetTodayDiaryHomeResponse.WaterDiary getWaterDiarySummary(
             Long petId,
             LocalDate today
     ) {
         return petWaterIntakeRepository.findByPet_IdAndIntakeDate(petId, today)
-                .map(water -> new PetTodayDiaryHomeResponse.WaterDiary(
-                        water.getId(),
-                        water.getTotalAmountMl(),
-                        formatAmount(water.getTotalAmountMl()) + "ml",
-                        true
-                ))
-                .orElseGet(() -> new PetTodayDiaryHomeResponse.WaterDiary(
-                        null,
-                        BigDecimal.ZERO,
-                        "0ml",
-                        false
-                ));
+                .map(water -> {
+                    log.info(
+                            "[홈 물 기록] petId={}, today={}, waterId={}, amount={}",
+                            petId,
+                            today,
+                            water.getId(),
+                            water.getTotalAmountMl()
+                    );
+
+                    return new PetTodayDiaryHomeResponse.WaterDiary(
+                            water.getId(),
+                            water.getTotalAmountMl(),
+                            formatAmount(water.getTotalAmountMl()) + "ml",
+                            true
+                    );
+                })
+                .orElseGet(() -> {
+                    log.info(
+                            "[홈 물 기록] 기록 없음 petId={}, today={}",
+                            petId,
+                            today
+                    );
+
+                    return new PetTodayDiaryHomeResponse.WaterDiary(
+                            null,
+                            BigDecimal.ZERO,
+                            "0ml",
+                            false
+                    );
+                });
     }
 
+    /**
+     * 간식 카드
+     *
+     * givenCount = 오늘 해당 펫의 간식 기록 개수
+     */
     private PetTodayDiaryHomeResponse.TreatDiary getTreatDiarySummary(
             Long petId,
             LocalDate today
@@ -229,6 +355,13 @@ public class PetDiaryHomeService {
                 today
         );
 
+        log.info(
+                "[홈 간식 카운트] petId={}, today={}, givenCount={}",
+                petId,
+                today,
+                givenCount
+        );
+
         return new PetTodayDiaryHomeResponse.TreatDiary(
                 givenCount,
                 givenCount + "회",
@@ -236,6 +369,14 @@ public class PetDiaryHomeService {
         );
     }
 
+    /**
+     * 영양제 카드
+     *
+     * targetCount = 해당 펫 영양제 목표 횟수 총합
+     * givenCount = 오늘 해당 펫 영양제 급여 횟수 총합
+     *
+     * displayText는 given / target 순서로 맞춤.
+     */
     private PetTodayDiaryHomeResponse.CapsuleDiary getCapsuleDiarySummary(
             Long petId,
             LocalDate today
@@ -260,10 +401,34 @@ public class PetDiaryHomeService {
                 .mapToInt(Integer::intValue)
                 .sum();
 
+        String intakeDebugText = intakes.stream()
+                .map(intake -> {
+                    Long intakeId = intake.getId();
+                    Long capsuleId = intake.getPetCapsule() != null
+                            ? intake.getPetCapsule().getId()
+                            : null;
+
+                    return "{intakeId=" + intakeId
+                            + ", petCapsuleId=" + capsuleId
+                            + ", givenCount=" + intake.getGivenCount()
+                            + ", intakeDate=" + intake.getIntakeDate()
+                            + "}";
+                })
+                .collect(Collectors.joining(", "));
+
+        log.info(
+                "[홈 영양제 카운트] petId={}, today={}, givenCount={}, targetCount={}, intakes=[{}]",
+                petId,
+                today,
+                givenCount,
+                targetCount,
+                intakeDebugText
+        );
+
         return new PetTodayDiaryHomeResponse.CapsuleDiary(
                 givenCount,
                 targetCount,
-                targetCount + "회 / " + givenCount + "회 급여",
+                givenCount + "회 / " + targetCount + "회 급여",
                 targetCount > 0 || givenCount > 0
         );
     }

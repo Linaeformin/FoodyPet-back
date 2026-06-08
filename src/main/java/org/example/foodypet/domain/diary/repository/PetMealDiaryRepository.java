@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface PetMealDiaryRepository extends JpaRepository<PetMealDiary, Long> {
+
     boolean existsByPetIdAndDailyDietIdAndPetMealScheduleIdAndDiaryDate(
             Long petId,
             Long dailyDietId,
@@ -32,11 +33,6 @@ public interface PetMealDiaryRepository extends JpaRepository<PetMealDiary, Long
     );
 
     List<PetMealDiary> findByPet_IdAndDiaryDateOrderByCreatedAtDesc(
-            Long petId,
-            LocalDate diaryDate
-    );
-
-    Integer countByPet_IdAndDiaryDate(
             Long petId,
             LocalDate diaryDate
     );
