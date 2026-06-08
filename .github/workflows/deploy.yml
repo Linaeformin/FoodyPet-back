@@ -1,3 +1,4 @@
+# deploy workflow
 name: Deploy Spring Boot to EC2
 
 on:
@@ -45,8 +46,17 @@ jobs:
 
             mkdir -p /home/ubuntu/app/logs
 
+            PID_FILE=/home/ubuntu/app/app.pid
+
             echo "Stopping old application..."
-            pkill -f "java -jar .*foodypet.*\.jar" || true
+            if [ -f "$PID_FILE" ]; then
+              OLD_PID=$(cat "$PID_FILE")
+              if ps -p "$OLD_PID" > /dev/null 2>&1; then
+                kill "$OLD_PID"
+                sleep 3
+              fi
+              rm -f "$PID_FILE"
+            fi
 
             echo "Finding jar file..."
             JAR_NAME=$(ls /home/ubuntu/app/build/libs/*.jar | grep -v plain | head -n 1)
@@ -61,9 +71,12 @@ jobs:
             echo "Starting application..."
             nohup java -jar "$JAR_NAME" > /home/ubuntu/app/logs/app.log 2>&1 &
 
+            NEW_PID=$!
+            echo "$NEW_PID" > "$PID_FILE"
+
             sleep 5
 
             echo "Checking application process..."
-            pgrep -f "java -jar .*foodypet.*\.jar" || true
+            ps -p "$NEW_PID"
 
-            echo "Deploy finished."
+            echo "Deploy finished. PID=$NEW_PID"
