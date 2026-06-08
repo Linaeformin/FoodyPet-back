@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,6 +34,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PetDiaryHomeService {
+
+    private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
 
     private final PetRepository petRepository;
 
@@ -48,7 +51,7 @@ public class PetDiaryHomeService {
     private final PetCapsuleIntakeRepository petCapsuleIntakeRepository;
 
     public PetTodayDiaryHomeResponse getTodayDiaryHome(CustomUserDetails me) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(KOREA_ZONE);
         Long userId = me.getId();
 
         List<Pet> pets = petRepository.findByUser_IdOrderByIdAsc(userId);
@@ -75,14 +78,6 @@ public class PetDiaryHomeService {
         );
     }
 
-    /**
-     * 해당 펫의 오늘 남은 바로 식단
-     *
-     * 기준:
-     * 1. 오늘 확정 식단 조회
-     * 2. 그 식단에서 아직 식단 일기가 작성되지 않은 가장 빠른 mealSchedule 조회
-     * 3. 해당 schedule의 mealOrder로 dailyDietItem 조회
-     */
     private PetTodayDiaryHomeResponse.TodayMeal getTodayMeal(
             Long petId,
             LocalDate today
@@ -188,12 +183,6 @@ public class PetDiaryHomeService {
         );
     }
 
-    /**
-     * 밥 일기 카드
-     *
-     * targetCount = 해당 펫의 하루 급여 횟수
-     * givenCount = 오늘 해당 펫의 식단 일기 작성 횟수
-     */
     private PetTodayDiaryHomeResponse.MealDiary getMealDiarySummary(
             Long petId,
             LocalDate today
@@ -212,9 +201,6 @@ public class PetDiaryHomeService {
         );
     }
 
-    /**
-     * 물 카드
-     */
     private PetTodayDiaryHomeResponse.WaterDiary getWaterDiarySummary(
             Long petId,
             LocalDate today
@@ -234,11 +220,6 @@ public class PetDiaryHomeService {
                 ));
     }
 
-    /**
-     * 간식 카드
-     *
-     * givenCount = 오늘 해당 펫의 간식 기록 개수
-     */
     private PetTodayDiaryHomeResponse.TreatDiary getTreatDiarySummary(
             Long petId,
             LocalDate today
@@ -255,14 +236,6 @@ public class PetDiaryHomeService {
         );
     }
 
-    /**
-     * 영양제 카드
-     *
-     * targetCount = 해당 펫 영양제 목표 횟수 총합
-     * givenCount = 오늘 해당 펫 영양제 급여 횟수 총합
-     *
-     * displayText는 target / given 순서
-     */
     private PetTodayDiaryHomeResponse.CapsuleDiary getCapsuleDiarySummary(
             Long petId,
             LocalDate today
