@@ -20,8 +20,10 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.server.ResponseStatusException;
+import lombok.extern.slf4j.Slf4j;
 
 // 전체 예외 처리 클래스
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -72,6 +74,10 @@ public class GlobalExceptionHandler {
     // 지원하지 않는 Content-Type
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     public ResponseEntity<?> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException ex) {
+        log.error("[415_ERROR] unsupported contentType={}", ex.getContentType());
+        log.error("[415_ERROR] supported mediaTypes={}", ex.getSupportedMediaTypes());
+        log.error("[415_ERROR] message={}", ex.getMessage(), ex);
+
         return ApiError.of(415, "UNSUPPORTED_MEDIA_TYPE", "요청의 Content-Type이 올바르지 않습니다.");
     }
 
@@ -141,6 +147,9 @@ public class GlobalExceptionHandler {
     // 멀티파트: form 파트 누락
     @ExceptionHandler(MissingServletRequestPartException.class)
     public ResponseEntity<?> handleMissingPart(MissingServletRequestPartException ex) {
+        log.error("[MULTIPART_ERROR] missing part name={}", ex.getRequestPartName());
+        log.error("[MULTIPART_ERROR] message={}", ex.getMessage(), ex);
+
         String part = ex.getRequestPartName();
         return ApiError.of(400, "MISSING_PART", part + " 파트가 필요합니다.");
     }
@@ -154,6 +163,8 @@ public class GlobalExceptionHandler {
     // 멀티파트 요청 오류
     @ExceptionHandler(MultipartException.class)
     public ResponseEntity<?> handleMultipart(MultipartException ex) {
+        log.error("[MULTIPART_ERROR] message={}", ex.getMessage(), ex);
+
         return ApiError.of(400, "MULTIPART_ERROR", "파일 업로드 요청 형식이 올바르지 않습니다.");
     }
 

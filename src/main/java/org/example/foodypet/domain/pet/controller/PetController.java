@@ -14,7 +14,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/pets")
 @RequiredArgsConstructor
@@ -29,6 +31,13 @@ public class PetController {
             @RequestPart("data") @Valid PetAssignFormDto petAssignFormDto,
             @RequestPart("image") MultipartFile image
     ) {
+        log.info("[PET_REGISTER] controller entered");
+        log.info("[PET_REGISTER] userId={}", me != null ? me.getId() : null);
+        log.info("[PET_REGISTER] dto={}", petAssignFormDto);
+        log.info("[PET_REGISTER] imageName={}", image.getOriginalFilename());
+        log.info("[PET_REGISTER] imageContentType={}", image.getContentType());
+        log.info("[PET_REGISTER] imageSize={}", image.getSize());
+
         petService.assignPet(me.getId(), petAssignFormDto, image);
 
         return ResponseEntity
