@@ -29,11 +29,7 @@ public class PetController {
             @RequestPart("data") @Valid PetAssignFormDto petAssignFormDto,
             @RequestPart("image") MultipartFile image
     ) {
-        String imageUrl = s3Uploader.uploadPetImage(image);
-
-        petAssignFormDto.getPetInfo().setImageUrl(imageUrl);
-
-        petService.assignPet(me.getId(), petAssignFormDto);
+        petService.assignPet(me.getId(), petAssignFormDto, image);
 
         return ResponseEntity
                 .status(201)
