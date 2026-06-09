@@ -3,6 +3,7 @@ package org.example.foodypet.domain.diary.controller;
 import lombok.RequiredArgsConstructor;
 import org.example.foodypet.common.config.ApiSuccess;
 import org.example.foodypet.common.config.CustomUserDetails;
+import org.example.foodypet.domain.diary.dto.MealDiaryDetailResponse;
 import org.example.foodypet.domain.diary.dto.MealDiaryResponse;
 import org.example.foodypet.domain.diary.dto.MealDiaryWriteFormResponse;
 import org.example.foodypet.domain.diary.dto.PetMealDiaryCreateRequest;
@@ -67,6 +68,23 @@ public class PetMealDiaryController {
     ) {
         List<MealDiaryResponse> response =
                 mealDiaryDietService.getTodayMealDiaries(me.getId(), petId);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 식단 일기 상세 조회
+     *
+     * 예:
+     * GET /api/diaries/meals/1
+     */
+    @GetMapping("/{diaryId}")
+    public ResponseEntity<MealDiaryDetailResponse> getMealDiaryDetail(
+            @PathVariable Long diaryId,
+            @AuthenticationPrincipal CustomUserDetails me
+    ) {
+        MealDiaryDetailResponse response =
+                mealDiaryDietService.getMealDiaryDetail(me.getId(), diaryId);
 
         return ResponseEntity.ok(response);
     }
