@@ -34,11 +34,19 @@ public class PetCapsuleIntake extends BaseTimeEntity {
         PetCapsuleIntake intake = new PetCapsuleIntake();
         intake.petCapsule = petCapsule;
         intake.intakeDate = intakeDate;
-        intake.givenCount = givenCount;
+        intake.givenCount = givenCount == null ? 0 : givenCount;
         return intake;
     }
 
     public void updateGivenCount(Integer givenCount) {
-        this.givenCount = givenCount;
+        this.givenCount = givenCount == null ? 0 : givenCount;
+    }
+
+    public void addGivenCount(Integer givenCount) {
+        if (givenCount == null || givenCount <= 0) {
+            return;
+        }
+
+        this.givenCount += givenCount;
     }
 }
