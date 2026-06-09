@@ -2,10 +2,7 @@ package org.example.foodypet.domain.diary.service;
 
 import lombok.RequiredArgsConstructor;
 import org.example.foodypet.common.S3Uploader;
-import org.example.foodypet.domain.diary.dto.MealDiaryFoodResponse;
-import org.example.foodypet.domain.diary.dto.MealDiaryResponse;
-import org.example.foodypet.domain.diary.dto.MealDiaryWriteFormResponse;
-import org.example.foodypet.domain.diary.dto.PetMealDiaryCreateRequest;
+import org.example.foodypet.domain.diary.dto.*;
 import org.example.foodypet.domain.diary.entity.PetMealDiary;
 import org.example.foodypet.domain.diary.entity.PetMealDiaryCapsule;
 import org.example.foodypet.domain.diary.entity.PetMealDiarySymptom;
@@ -447,5 +444,43 @@ public class MealDiaryDietService {
             Long dailyDietId,
             Integer mealOrder
     ) {
+    }
+
+    public MealDiaryDetailResponse getMealDiaryDetail(Long userId, Long diaryId) {
+        PetMealDiary diary = petMealDiaryRepository.findById(diaryId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 식단 일기입니다."));
+
+        Long petId = diary.getPet().getId();
+
+        validatePetOwner(userId, petId);
+
+        List<PetMealDiarySymptom> diarySymptoms =
+                petMealDiarySymptomRepository.findByMealDiary_Id(diaryId);
+
+        List<PetMealDiaryCapsule> diaryCapsules =
+                petMealDiaryCapsuleRepository.findByMealDiary_Id(diaryId);
+
+        return new MealDiaryDetailResponse(
+                diary.getId(),
+                diary.getPet().getId(),
+                diary.getDailyDiet().getId(),
+                diary.getPetMealSchedule().getId(),
+                diary.getDiaryDate(),
+                diary.getImageUrl(),
+                diary.getSatisfaction(),
+                diary.getMealStatus(),
+                diary.getWaterIntakeMl(),
+                diary.getMemo(),
+                diarySymptoms.stream()
+                        .map(PetMealDiarySymptom::getSymptom)
+                        .toList(),
+                diaryCapsules.stream()
+                        .map(capsule -> new MealDiaryDetailResponse.CapsuleResponse(
+                                capsule.getPetCapsule().getId(),
+                                capsule.getPetCapsule().getCapsuleName(),
+                                capsule.getGivenCount()
+                        ))
+                        .toList()
+        );
     }
 }
