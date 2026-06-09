@@ -18,6 +18,7 @@ import org.example.foodypet.domain.food.entity.Unit;
 import org.example.foodypet.domain.pet.entity.Pet;
 import org.example.foodypet.domain.pet.entity.PetCapsule;
 import org.example.foodypet.domain.pet.entity.PetMealSchedule;
+import org.example.foodypet.domain.pet.repository.PetCapsuleIntakeRepository;
 import org.example.foodypet.domain.pet.repository.PetCapsuleRepository;
 import org.example.foodypet.domain.pet.repository.PetMealScheduleRepository;
 import org.example.foodypet.domain.pet.repository.PetRepository;
@@ -36,6 +37,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.example.foodypet.domain.pet.entity.PetCapsuleIntake;
+import org.example.foodypet.domain.pet.repository.PetCapsuleIntakeRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -48,7 +51,7 @@ public class MealDiaryDietService {
 
     private final PetDailyDietRepository petDailyDietRepository;
     private final PetDailyDietItemRepository petDailyDietItemRepository;
-
+    private final PetCapsuleIntakeRepository petCapsuleIntakeRepository;
     private final PetMealScheduleRepository petMealScheduleRepository;
     private final PetCapsuleRepository petCapsuleRepository;
 
@@ -295,14 +298,40 @@ public class MealDiaryDietService {
                 throw new IllegalArgumentException("해당 반려동물의 영양제가 아닙니다.");
             }
 
+            Integer givenCount = capsuleRequest.givenCount();
+
             PetMealDiaryCapsule diaryCapsule = PetMealDiaryCapsule.create(
                     savedMealDiary,
                     petCapsule,
-                    capsuleRequest.givenCount()
+                    givenCount
             );
 
             petMealDiaryCapsuleRepository.save(diaryCapsule);
+
+            increaseCapsuleIntakeCount(
+                    petCapsule,
+                    request.diaryDate(),
+                    givenCount
+            );
         });
+    }
+
+    private void increaseCapsuleIntakeCount(
+            PetCapsule petCapsule,
+            LocalDate intakeDate,
+            Integer givenCount
+    ) {
+        if (givenCount == null || givenCount <= 0) {
+            return;
+        }
+
+        PetCapsuleIntake intake = petCapsuleIntakeRepository
+                .findByPetCapsuleAndIntakeDate(petCapsule, intakeDate)
+                .orElseGet(() -> petCapsuleIntakeRepository.save(
+                        PetCapsuleIntake.create(petCapsule, intakeDate, 0)
+                ));
+
+        intake.addGivenCount(givenCount);
     }
 
     private void saveWaterIntake(
