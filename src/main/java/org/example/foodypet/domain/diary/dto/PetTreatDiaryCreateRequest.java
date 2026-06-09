@@ -1,5 +1,7 @@
 package org.example.foodypet.domain.diary.dto;
 
+import org.example.foodypet.domain.food.entity.Unit;
+
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -9,7 +11,8 @@ public record PetTreatDiaryCreateRequest(
 ) {
     public record Item(
             Long stockId,
-            BigDecimal amount
+            BigDecimal amount,
+            Unit unit
     ) {
     }
 }

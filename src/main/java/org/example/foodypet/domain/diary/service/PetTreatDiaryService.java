@@ -15,11 +15,7 @@ import org.example.foodypet.domain.pet.entity.Pet;
 import org.example.foodypet.domain.pet.repository.PetRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.example.foodypet.domain.food.entity.PetFood;
-import org.example.foodypet.domain.food.entity.Unit;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
@@ -134,7 +130,7 @@ public class PetTreatDiaryService {
                             treatDiary,
                             stock.getPetFood(),
                             itemRequest.amount(),
-                            stock.getUnit()
+                            itemRequest.unit()
                     );
                 })
                 .toList();
@@ -170,6 +166,10 @@ public class PetTreatDiaryService {
 
             if (item.amount() == null || item.amount().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new IllegalArgumentException("간식 급여량은 0보다 커야 합니다.");
+            }
+
+            if (item.unit() == null) {
+                throw new IllegalArgumentException("간식 단위를 선택해야 합니다.");
             }
         }
     }
