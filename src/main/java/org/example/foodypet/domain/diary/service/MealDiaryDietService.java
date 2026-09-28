@@ -45,8 +45,6 @@ import org.example.foodypet.domain.pet.repository.PetCapsuleIntakeRepository;
 @Transactional(readOnly = true)
 public class MealDiaryDietService {
 
-    private final S3Uploader s3Uploader;
-
     private final PetRepository petRepository;
 
     private final PetDailyDietRepository petDailyDietRepository;
@@ -209,7 +207,7 @@ public class MealDiaryDietService {
                 request.diaryDate()
         );
 
-        String imageUrl = s3Uploader.uploadMealDiaryImage(image);
+        String imageUrl = "";
 
         PetMealDiary mealDiary = PetMealDiary.create(
                 pet,

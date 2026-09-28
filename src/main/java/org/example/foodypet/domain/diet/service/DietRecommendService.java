@@ -19,7 +19,7 @@ import org.example.foodypet.domain.pet.repository.PetNutritionStandardRepository
 import org.example.foodypet.domain.pet.repository.PetRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import lombok.extern.slf4j.Slf4j;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -50,14 +51,14 @@ public class DietRecommendService {
     private static final int CANDIDATE_LIMIT = 30;
     private static final int TOP_MEAL_RESULT_LIMIT = 50;
 
-    private static final BigDecimal CALORIE_WEIGHT = new BigDecimal("5.0");
-    private static final BigDecimal PROTEIN_WEIGHT = new BigDecimal("6.0");
-    private static final BigDecimal FAT_WEIGHT = new BigDecimal("6.0");
-    private static final BigDecimal ASH_WEIGHT = new BigDecimal("3.0");
-    private static final BigDecimal FIBER_WEIGHT = new BigDecimal("4.0");
+    private static final BigDecimal CALORIE_WEIGHT = new BigDecimal("2.0");
+    private static final BigDecimal PROTEIN_WEIGHT = new BigDecimal("30.0");
+    private static final BigDecimal FAT_WEIGHT = new BigDecimal("20.0");
+    private static final BigDecimal ASH_WEIGHT = new BigDecimal("20.0");
+    private static final BigDecimal FIBER_WEIGHT = new BigDecimal("10.0");
 
     private static final BigDecimal CALCIUM_PHOSPHORUS_TARGET_RATIO = new BigDecimal("1.20");
-    private static final BigDecimal CALCIUM_PHOSPHORUS_RATIO_WEIGHT = new BigDecimal("4.0");
+    private static final BigDecimal CALCIUM_PHOSPHORUS_RATIO_WEIGHT = new BigDecimal("2.0");
 
     private static final BigDecimal TAURINE_MISSING_PENALTY = new BigDecimal("1.0");
     private static final BigDecimal FOOD_LIKE_WEIGHT = new BigDecimal("1.5");
@@ -132,43 +133,59 @@ public class DietRecommendService {
                 dailyTotal.phosphorus()
         );
 
-        PetDailyDiet savedDiet = petDailyDietRepository
-                .findByPet_IdAndDietDate(pet.getId(), dietDate)
-                .orElse(null);
+//        PetDailyDiet savedDiet = petDailyDietRepository
+//                .findByPet_IdAndDietDate(pet.getId(), dietDate)
+//                .orElse(null);
+//
+//        if (savedDiet != null) {
+//            petDailyDietItemRepository.deleteByDailyDiet_Id(savedDiet.getId());
+//
+//            savedDiet.updateRecommendedDiet(
+//                    FoodSource.SYSTEM,
+//                    dailyTotal.calorie(),
+//                    dailyTotal.protein(),
+//                    dailyTotal.fat(),
+//                    dailyTotal.ash(),
+//                    dailyTotal.fiber(),
+//                    dailyTotal.calcium(),
+//                    dailyTotal.phosphorus(),
+//                    dailyTotal.taurine(),
+//                    calciumPhosphorusRatio
+//            );
+//        } else {
+//            savedDiet = PetDailyDiet.createRecommendedDiet(
+//                    pet,
+//                    dietDate,
+//                    FoodSource.SYSTEM,
+//                    dailyTotal.calorie(),
+//                    dailyTotal.protein(),
+//                    dailyTotal.fat(),
+//                    dailyTotal.ash(),
+//                    dailyTotal.fiber(),
+//                    dailyTotal.calcium(),
+//                    dailyTotal.phosphorus(),
+//                    dailyTotal.taurine(),
+//                    calciumPhosphorusRatio
+//            );
+//
+//            petDailyDietRepository.save(savedDiet);
+//        }
+        PetDailyDiet savedDiet = PetDailyDiet.createRecommendedDiet(
+                pet,
+                dietDate,
+                FoodSource.SYSTEM,
+                dailyTotal.calorie(),
+                dailyTotal.protein(),
+                dailyTotal.fat(),
+                dailyTotal.ash(),
+                dailyTotal.fiber(),
+                dailyTotal.calcium(),
+                dailyTotal.phosphorus(),
+                dailyTotal.taurine(),
+                calciumPhosphorusRatio
+        );
 
-        if (savedDiet != null) {
-            petDailyDietItemRepository.deleteByDailyDiet_Id(savedDiet.getId());
-
-            savedDiet.updateRecommendedDiet(
-                    FoodSource.SYSTEM,
-                    dailyTotal.calorie(),
-                    dailyTotal.protein(),
-                    dailyTotal.fat(),
-                    dailyTotal.ash(),
-                    dailyTotal.fiber(),
-                    dailyTotal.calcium(),
-                    dailyTotal.phosphorus(),
-                    dailyTotal.taurine(),
-                    calciumPhosphorusRatio
-            );
-        } else {
-            savedDiet = PetDailyDiet.createRecommendedDiet(
-                    pet,
-                    dietDate,
-                    FoodSource.SYSTEM,
-                    dailyTotal.calorie(),
-                    dailyTotal.protein(),
-                    dailyTotal.fat(),
-                    dailyTotal.ash(),
-                    dailyTotal.fiber(),
-                    dailyTotal.calcium(),
-                    dailyTotal.phosphorus(),
-                    dailyTotal.taurine(),
-                    calciumPhosphorusRatio
-            );
-
-            petDailyDietRepository.save(savedDiet);
-        }
+        petDailyDietRepository.save(savedDiet);
 
         for (RecommendedMeal meal : recommendedMeals) {
             for (CalculatedFood food : meal.foods()) {
@@ -340,20 +357,61 @@ public class DietRecommendService {
             throw new IllegalArgumentException("추천 조합을 만들 수 없습니다.");
         }
 
-        topMeals.sort(Comparator.comparing(RecommendedMeal::score));
-
-        BigDecimal bestScore = topMeals.get(0).score();
-
-        List<RecommendedMeal> similarBestMeals = topMeals.stream()
-                .filter(meal -> meal.score()
-                        .subtract(bestScore)
-                        .abs()
-                        .compareTo(SIMILAR_SCORE_RANGE) <= 0)
+//        List<RecommendedMeal> optimizedMeals = topMeals.stream()
+//                .map(meal -> optimizeFoodAmounts(meal, candidateStocks, target, usedFoodIdsToday))
+//                .sorted(Comparator.comparing(RecommendedMeal::score))
+//                .toList();
+//
+//        return optimizedMeals.get(0);
+        List<RecommendedMeal> optimizedMeals = topMeals.stream()
+                .map(meal -> optimizeFoodAmounts(meal, candidateStocks, target, usedFoodIdsToday))
+                .sorted(Comparator.comparing(RecommendedMeal::score))
                 .toList();
 
-        return similarBestMeals.get(
-                ThreadLocalRandom.current().nextInt(similarBestMeals.size())
+        RecommendedMeal selected = optimizedMeals.get(0);
+
+        RecommendedMeal closestProtein = optimizedMeals.stream()
+                .min(Comparator.comparing(meal ->
+                        meal.nutritionSum().protein()
+                                .subtract(target.protein())
+                                .abs()
+                ))
+                .orElseThrow();
+
+        log.info(
+                "[식단 추천] 끼니={}, 단백질 목표={}g, 최종 선택: 단백질={}g, 열량={}kcal, 점수={}",
+                mealOrder,
+                target.protein(),
+                selected.nutritionSum().protein(),
+                selected.nutritionSum().calorie(),
+                selected.score()
         );
+
+        log.info(
+                "[식단 추천] 끼니={}, 단백질 최근접 후보: 단백질={}g, 열량={}kcal, 점수={}",
+                mealOrder,
+                closestProtein.nutritionSum().protein(),
+                closestProtein.nutritionSum().calorie(),
+                closestProtein.score()
+        );
+
+        return selected;
+//        topMeals.sort(Comparator.comparing(RecommendedMeal::score));
+//
+//        return topMeals.get(0);
+
+//        BigDecimal bestScore = topMeals.get(0).score();
+//
+//        List<RecommendedMeal> similarBestMeals = topMeals.stream()
+//                .filter(meal -> meal.score()
+//                        .subtract(bestScore)
+//                        .abs()
+//                        .compareTo(SIMILAR_SCORE_RANGE) <= 0)
+//                .toList();
+//
+//        return similarBestMeals.get(
+//                ThreadLocalRandom.current().nextInt(similarBestMeals.size())
+//        );
     }
 
     private void searchCombinationsAndKeepTop(
@@ -1079,5 +1137,173 @@ public class DietRecommendService {
         }
 
         return value.stripTrailingZeros().toPlainString();
+    }
+
+    /**
+     * 상위 조합의 총열량을 최대한 유지하면서 식품 사이에 열량을 옮깁니다.
+     * 한 번에 옮기는 양을 줄여가며 점수가 개선되는 경우만 채택합니다.
+     */
+    private RecommendedMeal optimizeFoodAmounts(
+            RecommendedMeal original,
+            List<PetFoodStock> candidateStocks,
+            MealTarget target,
+            List<Long> usedFoodIdsToday
+    ) {
+        RecommendedMeal best = original;
+
+        BigDecimal[] stepRates = {
+                new BigDecimal("0.10"),
+                new BigDecimal("0.05"),
+                new BigDecimal("0.02"),
+                new BigDecimal("0.01")
+        };
+
+        for (BigDecimal stepRate : stepRates) {
+            // 같은 크기의 이동을 반복하여 조금씩 개선합니다.
+            for (int pass = 0; pass < 5; pass++) {
+                RecommendedMeal bestInPass = best;
+
+                for (int from = 0; from < best.foods().size(); from++) {
+                    for (int to = 0; to < best.foods().size(); to++) {
+                        if (from == to) {
+                            continue;
+                        }
+
+                        RecommendedMeal candidate = moveCaloriesBetweenFoods(
+                                best,
+                                from,
+                                to,
+                                target.calorie().multiply(stepRate),
+                                candidateStocks,
+                                target,
+                                usedFoodIdsToday
+                        );
+
+                        if (candidate != null
+                                && candidate.score().compareTo(bestInPass.score()) < 0) {
+                            bestInPass = candidate;
+                        }
+                    }
+                }
+
+                if (bestInPass.score().compareTo(best.score()) >= 0) {
+                    break;
+                }
+
+                best = bestInPass;
+            }
+        }
+
+        return best;
+    }
+
+    private RecommendedMeal moveCaloriesBetweenFoods(
+            RecommendedMeal current,
+            int fromIndex,
+            int toIndex,
+            BigDecimal caloriesToMove,
+            List<PetFoodStock> candidateStocks,
+            MealTarget target,
+            List<Long> usedFoodIdsToday
+    ) {
+        CalculatedFood fromFood = current.foods().get(fromIndex);
+        CalculatedFood toFood = current.foods().get(toIndex);
+
+        PetFoodStock fromStock = findStock(candidateStocks, fromFood.petFood().getId());
+        PetFoodStock toStock = findStock(candidateStocks, toFood.petFood().getId());
+
+        BigDecimal fromKcalPerGram = kcalPerGram(fromFood.petFood());
+        BigDecimal toKcalPerGram = kcalPerGram(toFood.petFood());
+
+        BigDecimal fromAmountChange = caloriesToMove.divide(
+                fromKcalPerGram, 2, RoundingMode.HALF_UP
+        );
+        BigDecimal toAmountChange = caloriesToMove.divide(
+                toKcalPerGram, 2, RoundingMode.HALF_UP
+        );
+
+        BigDecimal newFromAmount = fromFood.amount().subtract(fromAmountChange);
+        BigDecimal newToAmount = toFood.amount().add(toAmountChange);
+
+        // 기존 조합의 식품 수를 유지하고 재고량을 넘지 않습니다.
+        if (newFromAmount.compareTo(ZERO) <= 0
+                || newToAmount.compareTo(convertToGram(
+                toStock.getQuantity(), toStock.getUnit()
+        )) > 0) {
+            return null;
+        }
+
+        List<CalculatedFood> changedFoods = new ArrayList<>(current.foods());
+
+        changedFoods.set(
+                fromIndex,
+                calculateFoodByAmount(fromStock, newFromAmount)
+        );
+        changedFoods.set(
+                toIndex,
+                calculateFoodByAmount(toStock, newToAmount)
+        );
+
+        NutritionSum sum = NutritionSum.of(changedFoods);
+        BigDecimal score = calculateCombinationScore(sum, target, changedFoods)
+                .add(calculateRepeatPenalty(changedFoods, usedFoodIdsToday));
+
+        return new RecommendedMeal(
+                current.mealOrder(),
+                current.mealTime(),
+                changedFoods,
+                sum,
+                score
+        );
+    }
+
+    private PetFoodStock findStock(List<PetFoodStock> stocks, Long foodId) {
+        return stocks.stream()
+                .filter(stock -> stock.getPetFood().getId().equals(foodId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "추천 식품의 재고를 찾을 수 없습니다: " + foodId
+                ));
+    }
+
+    private BigDecimal kcalPerGram(PetFood food) {
+        return food.getMetabolizableEnergyKcalPer100g()
+                .divide(HUNDRED, 6, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * 기존 calculateFoodByCombinationSize()와 동일한 영양 계산식으로,
+     * 지정된 급여량의 영양소를 다시 계산합니다.
+     */
+    private CalculatedFood calculateFoodByAmount(
+            PetFoodStock stock,
+            BigDecimal amount
+    ) {
+        PetFood food = stock.getPetFood();
+
+        BigDecimal calorie = amount.multiply(kcalPerGram(food))
+                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal protein = percentOf(amount, food.getCrudeProteinPercent());
+        BigDecimal fat = percentOf(amount, food.getCrudeFatPercent());
+        BigDecimal ash = percentOfNullable(amount, food.getCrudeAshPercent());
+        BigDecimal fiber = percentOfNullable(amount, food.getCrudeFiberPercent());
+        BigDecimal calcium = percentOfNullable(amount, food.getCalciumPercent());
+        BigDecimal phosphorus = percentOfNullable(amount, food.getPhosphorusPercent());
+        BigDecimal taurine = per100gNullable(amount, food.getTaurineMgPer100g());
+
+        return new CalculatedFood(
+                food,
+                amount,
+                Unit.GRAM,
+                calorie,
+                protein,
+                fat,
+                ash,
+                fiber,
+                calcium,
+                phosphorus,
+                taurine,
+                stock.getFoodLike()
+        );
     }
 }

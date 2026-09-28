@@ -33,7 +33,6 @@ public class CommunityService {
     private final UsersRepository usersRepository;
     private final CommunityPostRepository communityPostRepository;
     private final CommunityPostImageRepository communityPostImageRepository;
-    private final S3Uploader s3Uploader;
     private final PetRepository petRepository;
     private final PetMealDiaryRepository petMealDiaryRepository;
     private final PetDailyDietItemRepository petDailyDietItemRepository;
@@ -131,7 +130,7 @@ public class CommunityService {
 
         validatePetOwner(mealDiary.getPet(), userPk);
 
-        String imageUrl = s3Uploader.uploadCommunityPostImage(image);
+        String imageUrl = "";
 
         CommunityPost post = CommunityPost.create(
                 user,

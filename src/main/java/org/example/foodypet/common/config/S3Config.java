@@ -10,7 +10,7 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 
-@Profile({"prod", "local"})
+@Profile("prod")
 @Configuration
 public class S3Config {
 

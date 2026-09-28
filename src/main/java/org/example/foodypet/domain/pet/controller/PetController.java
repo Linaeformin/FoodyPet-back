@@ -23,7 +23,6 @@ import lombok.extern.slf4j.Slf4j;
 public class PetController {
 
     private final PetService petService;
-    private final S3Uploader s3Uploader;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> assignPet(

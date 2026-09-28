@@ -31,13 +31,12 @@ public class PetService {
     private final PetCapsuleRepository petCapsuleRepository;
     private final PetNutritionStandardRepository petNutritionStandardRepository;
     private final PetCapsuleIntakeRepository petCapsuleIntakeRepository;
-    private final S3Uploader s3Uploader;
 
     public void assignPet(Long userId, PetAssignFormDto petAssignFormDto, MultipartFile image) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-        String imageUrl = s3Uploader.uploadPetImage(image);
+        String imageUrl = "";
 
         PetAssignFormDto.PetInfoDto petInfo = petAssignFormDto.getPetInfo();
 
