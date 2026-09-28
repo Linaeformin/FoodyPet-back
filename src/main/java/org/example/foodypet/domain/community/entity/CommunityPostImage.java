@@ -12,10 +12,13 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CommunityPostImage {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "post_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "post_id", nullable = false)
     private CommunityPost post;
 
     @Column(name = "image_url", length = 500, nullable = false)
@@ -26,4 +29,17 @@ public class CommunityPostImage {
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    public static CommunityPostImage create(
+            CommunityPost post,
+            String imageUrl,
+            Integer imageOrder
+    ) {
+        CommunityPostImage postImage = new CommunityPostImage();
+        postImage.post = post;
+        postImage.imageUrl = imageUrl;
+        postImage.imageOrder = imageOrder;
+        postImage.createdAt = LocalDateTime.now();
+        return postImage;
+    }
 }

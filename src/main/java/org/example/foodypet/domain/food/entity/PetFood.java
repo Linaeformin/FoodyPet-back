@@ -36,11 +36,12 @@ public class PetFood extends BaseTimeEntity {
     private FoodType foodType;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "unit", nullable = false)
+    private Unit unit;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "pet_type", nullable = false)
     private PetType petType;
-
-    @Column(name = "is_treat", nullable = false)
-    private Boolean isTreat = false;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

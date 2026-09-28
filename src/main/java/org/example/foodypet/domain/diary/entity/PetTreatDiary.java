@@ -25,4 +25,16 @@ public class PetTreatDiary extends BaseTimeEntity {
 
     @Column(name = "treat_round", nullable = false)
     private Integer treatRound;
+
+    public static PetTreatDiary create(
+            Pet pet,
+            LocalDate diaryDate,
+            Integer treatRound
+    ) {
+        PetTreatDiary diary = new PetTreatDiary();
+        diary.pet = pet;
+        diary.diaryDate = diaryDate;
+        diary.treatRound = treatRound;
+        return diary;
+    }
 }

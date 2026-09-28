@@ -13,10 +13,13 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PetWaterIntakeItem {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "water_intake_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "water_intake_id", nullable = false)
     private PetWaterIntake waterIntake;
 
     @Column(name = "amount_ml", precision = 8, scale = 2, nullable = false)
@@ -24,4 +27,19 @@ public class PetWaterIntakeItem {
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    public static PetWaterIntakeItem create(
+            PetWaterIntake waterIntake,
+            BigDecimal amountMl
+    ) {
+        PetWaterIntakeItem item = new PetWaterIntakeItem();
+        item.waterIntake = waterIntake;
+        item.amountMl = amountMl;
+        return item;
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
 }

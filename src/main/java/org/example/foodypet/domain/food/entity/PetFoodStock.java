@@ -16,6 +16,8 @@ import java.time.LocalDate;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PetFoodStock extends BaseTimeEntity {
 
+    private static final BigDecimal DEFAULT_FOOD_LIKE = new BigDecimal("50.00");
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -37,4 +39,61 @@ public class PetFoodStock extends BaseTimeEntity {
 
     @Column(name = "expired_at")
     private LocalDate expiredAt;
+
+    @Column(name = "is_treat", nullable = false)
+    private Boolean isTreat = false;
+
+    @Column(name = "food_like", precision = 5, scale = 2, nullable = false)
+    private BigDecimal foodLike;
+
+    public static PetFoodStock create(
+            User user,
+            PetFood petFood,
+            BigDecimal quantity,
+            Unit unit,
+            LocalDate expiredAt,
+            Boolean isTreat
+    ) {
+        PetFoodStock stock = new PetFoodStock();
+        stock.user = user;
+        stock.petFood = petFood;
+        stock.quantity = quantity;
+        stock.unit = unit;
+        stock.expiredAt = expiredAt;
+        stock.isTreat = isTreat != null ? isTreat : false;
+        stock.foodLike = DEFAULT_FOOD_LIKE;
+        return stock;
+    }
+
+    public void updateQuantity(BigDecimal quantity) {
+        this.quantity = quantity;
+    }
+
+    public void update(
+            BigDecimal quantity,
+            Unit unit,
+            LocalDate expiredAt,
+            Boolean isTreat
+    ) {
+        this.quantity = quantity;
+        this.unit = unit;
+        this.expiredAt = expiredAt;
+        this.isTreat = isTreat != null ? isTreat : false;
+    }
+
+    public void decreaseFoodLike(BigDecimal value) {
+        if (value == null || value.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        if (this.foodLike == null) {
+            this.foodLike = DEFAULT_FOOD_LIKE;
+        }
+
+        this.foodLike = this.foodLike.subtract(value);
+
+        if (this.foodLike.compareTo(BigDecimal.ZERO) < 0) {
+            this.foodLike = BigDecimal.ZERO;
+        }
+    }
 }

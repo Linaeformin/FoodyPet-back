@@ -1,15 +1,16 @@
 package org.example.foodypet.domain.pet.entity;
 
-import org.example.foodypet.common.entity.BaseTimeEntity;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.example.foodypet.common.entity.BaseTimeEntity;
 
 @Entity
 @Table(name = "pet_capsules")
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Setter
+@NoArgsConstructor
 public class PetCapsule extends BaseTimeEntity {
 
     @Id
